@@ -184,6 +184,10 @@ test("three real collision impulses render the flying head and respawn the selec
     const g = window.__gameTest.state;
     g.traffic = [];
     triggerPursuit(g);
+    // Isolate post-response collisions; timing is covered by medium-difficulty tests.
+    g.pursuitDelay = 0;
+    g.patrols = [];
+    g.pedestrians = [];
     g.police.slice(1).forEach((c) => (c.visible = false));
     const cop = g.police[0];
     for (let hit = 0; hit < 3; hit++) {
@@ -196,6 +200,7 @@ test("three real collision impulses render the flying head and respawn the selec
           pathTimer: 100,
         });
         stepGame(g, {}, 1 / 60);
+        g.policeImpactGrace = 0;
       }
       const f = {
         x: Math.sin(g.player.heading),
