@@ -1,12 +1,12 @@
-# Marina Getaway
+# Wobble City
 
-**Play on desktop:** [Marina Getaway](https://astra-game-nine.vercel.app)
+**Play on desktop:** [Wobble City](https://wobble-city.vercel.app)
 
 A desktop-only, single-player 3D game set around Singapore’s Marina Bay. Choose a wobblehead character, explore the waterfront, get into cars, collect gems and escape the police.
 
 Built with Three.js and Vite, combining the `astra-game` city and simulation with the characters, vehicles, animation and landmark assets from [Wobble Heads](https://github.com/ss-pratapIIITB/wobble-heads). Runs in the browser without a backend, API keys or runtime asset CDN.
 
-![Marina Getaway with rear-view mirror](artifacts/rear-view-mirror.png)
+![Wobble City with rear-view mirror](artifacts/rear-view-mirror.png)
 
 ## Play
 

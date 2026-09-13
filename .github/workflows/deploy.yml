@@ -1,4 +1,4 @@
-name: Verify Marina Getaway
+name: Verify Wobble City
 on:
   push:
     branches: [main]

@@ -4,7 +4,7 @@ const mobileDevice = navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPo
 if (mobileDevice) {
   const message=document.createElement('main');message.id='desktop-required';
   const title=document.createElement('h1');title.textContent='Play on desktop';
-  const copy=document.createElement('p');copy.textContent='Marina Getaway requires a desktop or laptop with a keyboard. Open this link in a desktop browser to play.';
+  const copy=document.createElement('p');copy.textContent='Wobble City requires a desktop or laptop with a keyboard. Open this link in a desktop browser to play.';
   message.append(title,copy);document.body.replaceChildren(message);
 } else {
   import('./main.js');
