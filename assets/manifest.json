@@ -1,0 +1,27 @@
+{
+  "suppliedBy": "user",
+  "duplicateGroundcoverOmitted": true,
+  "files": [
+    {
+      "name": "road",
+      "source": "assets/source/road.glb",
+      "runtime": "public/assets/models/road.glb",
+      "sha256": "2902c23841ebd201849b7a48d57ee38752a49f95a58d5b8e50bc1b93ef069c37",
+      "runtimeBytes": 312284
+    },
+    {
+      "name": "tree",
+      "source": "assets/source/tree.glb",
+      "runtime": "public/assets/models/tree.glb",
+      "sha256": "52108a61fdf323a46a2c5186ed523487244c397c85f2f744398f3dd5d793ee47",
+      "runtimeBytes": 884936
+    },
+    {
+      "name": "groundcover",
+      "source": "assets/source/groundcover.glb",
+      "runtime": "public/assets/models/groundcover.glb",
+      "sha256": "fadccdc55e7a924045d2c603c1182eb9c9f0d5c8f66a89602bd44d047a62dfea",
+      "runtimeBytes": 296136
+    }
+  ]
+}

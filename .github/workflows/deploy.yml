@@ -1,4 +1,4 @@
-name: Test and deploy Midnight Run
+name: Test and deploy Marina Getaway
 on:
   push:
     branches: [main]
@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:route
+      - run: npm run test:gameplay
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm run build

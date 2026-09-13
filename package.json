@@ -1,7 +1,7 @@
 {
   "name": "astra-game",
   "version": "1.0.0",
-  "description": "Midnight Run — a 3D browser car chase game",
+  "description": "Marina Getaway \u2014 local daytime Singapore gem and police chase game",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -9,7 +9,9 @@
     "test": "node --test tests/simulation.test.js",
     "test:browser": "playwright test",
     "test:route": "node tests/route-playtest.js",
-    "assets": "node scripts/prepare-assets.js"
+    "assets": "node scripts/prepare-assets.js",
+    "test:gameplay": "node tests/gameplay-playtest.js",
+    "assets:models": "node scripts/prepare-models.js"
   },
   "keywords": [],
   "author": "",
