@@ -989,8 +989,31 @@ export function stepGame(g, input = {}, dt) {
       p.along += p.speed * p.direction * dt;
       Object.assign(p, {x: next.x, z: next.z, y: next.y, heading: next.heading});
       p.walking = true;
+      p.blockedTime = 0;
     } else {
-      p.direction *= -1; p.wanderTimer = 2;
+      p.blockedTime = (p.blockedTime || 0) + dt;
+      if (p.blockedTime >= 1) {
+        p.blockedTime = 0;
+        // A blocked pair of waypoints must not keep a walker reversing forever.
+        // Pick a short clear route from the current position, preserving identity.
+        for (const turn of [1,-1,2,-2,3,-3,4,0]) {
+          const heading = p.heading + turn * Math.PI / 4;
+          const target = {x:p.x+Math.sin(heading)*4,z:p.z-Math.cos(heading)*4,y:p.y};
+          if (!driveableConnector(p,target,.4)) continue;
+          let clear = true;
+          for (let i=1;i<=8;i++) {
+            const point={x:p.x+(target.x-p.x)*i/8,z:p.z+(target.z-p.z)*i/8};
+            if (!movers.every(c=>distance(c,point)>4) || !g.vehicles.filter(v=>!v.destroyed).every(c=>distance(c,point)>3)
+              || !g.pedestrians.every(other=>other===p || other.hit || distance(other,point)>.65 || distance(other,point)>distance(other,p))) {clear=false;break;}
+          }
+          if (!clear) continue;
+          p.wanderRoad={points:[{x:p.x,z:p.z,y:p.y},target]};
+          p.waypoint=1;p.direction=1;p.pause=0;p.wanderTimer=5;
+          break;
+        }
+        continue;
+      }
+      p.direction *= -1;
       if (p.wanderRoad) p.waypoint = Math.max(0, Math.min(p.wanderRoad.points.length - 1, p.waypoint + p.direction));
     }
   }
