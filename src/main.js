@@ -1,3 +1,4 @@
+import {jump} from "./jumping.js";
 import {DefaultLoadingManager} from "three";
 import "./style.css";
 import { createWorld } from "./world.js";
@@ -189,6 +190,7 @@ addEventListener("keydown", (e) => {
     document.activeElement?.tagName !== "BUTTON"
   )
     start();
+  if (e.code === "Space") jump(game);
   if (e.code === "KeyF") {e.preventDefault();punch(game);}
   if (e.code === "KeyE") interact(game);
   if (e.code === "Escape" || e.code === "KeyP") pause();

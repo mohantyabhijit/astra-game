@@ -731,6 +731,7 @@ export function createWorld(canvas) {
           mode,
           speed: Math.hypot(g.player.vx || 0, g.player.vz || 0),
           heading: g.player.heading,
+          grounded: g.player.grounded !== false,
           reaction: g.player.reaction,
           attack: g.player.attack,
           hurt: g.player.hurt,

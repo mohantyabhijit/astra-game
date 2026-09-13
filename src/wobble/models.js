@@ -171,6 +171,7 @@ export function animateCharacter(
     speed = 0,
     mode = "idle",
     dance = false,
+    grounded = true,
     heading = 0,
     vehicle = null,
     transition = 1,
@@ -208,7 +209,7 @@ export function animateCharacter(
       poseBoarding(a, car, p, { mass: 2.8, hz: 1.6, amp: 3.8, size: 2.05 }, dt);
       return;
     }
-    a.mode = dance
+    a.mode = !grounded ? "air" : dance
       ? "run"
       : speed > 2.5
         ? "run"
@@ -216,7 +217,7 @@ export function animateCharacter(
           ? "walk"
           : "idle";
     a.speed = dance ? 3.1 : speed;
-    a.grounded = true;
+    a.grounded = grounded;
     // A planted foot follows changes in the supporting surface (e.g. a bridge
     // slope); retaining the old world-space height would bury it in the deck.
     if (a.gait) {

@@ -29,7 +29,7 @@ Free exploration starts immediately; the gem mission is optional. Collected gems
 | Shift | Run on foot; boost while driving |
 | E | Enter a nearby usable car; exit after slowing down |
 | F | Punch on foot |
-| Space | Handbrake |
+| Space | Jump on foot / handbrake while driving |
 | C | Switch camera |
 | M | Expand/collapse the map |
 | R | Recover the car to a safe road position |

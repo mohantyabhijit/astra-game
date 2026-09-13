@@ -1,3 +1,4 @@
+import {resetJump, stepJump} from "./jumping.js";
 import {resolvePoliceShot} from './police-ballistics.js';
 import {stepMelee} from './melee.js';
 export {punch} from './melee.js';
@@ -327,6 +328,7 @@ export function interact(g) {
   if (g.status !== "running" || g.transition || g.mode === "encounter" || g.mode === "exploding" || g.player.reaction)
     return false;
   if (g.mode === "foot") {
+    if (g.player.grounded === false) return false;
     const v = nearestVehicle(g);
     if (!v) return false;
     const path=boardingRoute(g.player,v,g.vehicles);
@@ -376,6 +378,7 @@ export function recoverCar(g) {
     g.transition
   )
     return;
+  resetJump(g.player);
   const q = closestRoad(g.player),
     target = driveableConnector(g.player, q) ? q : g.lastSafe;
   Object.assign(g.player, {
@@ -571,6 +574,7 @@ function explode(g) {
   emit(g, "WOBBLEHEAD WIPEOUT!", "impact");
 }
 function respawn(g) {
+  resetJump(g.player);
   const starterPoint = SPAWN,
     sf = forward(starterPoint.heading),
     p = {
@@ -697,6 +701,7 @@ function footStep(g, input, dt) {
       halfL: 0.45,
       halfW: 0.45,
     });
+    resetJump(g.player);
     emit(g, "Returned safely to the promenade", "warning");
     g.player.y = walkingSurfaceHeight(g.player);
   }
@@ -784,6 +789,7 @@ function pursuit(g, dt) {
 export function stepGame(g, input = {}, dt) {
   if (g.status !== "running") return;
   dt = clamp(dt, 0, 1 / 30);
+  if (g.mode !== "foot" || g.player.reaction) resetJump(g.player);
   g.elapsed += dt;
   g.pursuitDelay=Math.max(0,(g.pursuitDelay||0)-dt);
   g.policeImpactGrace=Math.max(0,(g.policeImpactGrace||0)-dt);
@@ -875,7 +881,7 @@ export function stepGame(g, input = {}, dt) {
     for (const parked of g.vehicles) {
       if (!parked.destroyed) resolveParkedVehicle(g.player, parked);
     }
-    g.player.y = walkingSurfaceHeight(g.player);
+    stepJump(g.player, dt, walkingSurfaceHeight(g.player));
   }
   if (g.mode === "driving" && g.activeVehicleId) {
     const v = g.vehicles.find((x) => x.id === g.activeVehicleId);
