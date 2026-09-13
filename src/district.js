@@ -165,23 +165,8 @@ for(let i=0;i<26;i++) {
   const p={x:-1550+(i%7)*75,z:700+Math.floor(i/7)*94},w=35+random()*18,d=40;
   if(clearSite(p,w,d))buildings.push({...p,w,d,h:80+random()*165,color:i%5,kind:'skyline'});
 }
+// Roads are open to the surrounding city; no roadside barrier meshes or colliders.
 export const barriers=[];
-for(const road of roads) {
-  if(road.kind==='service'||road.kind==='public')continue;
-  for(let i=0;i<road.points.length-(road.closed?0:1);i++) {
-    const a=road.points[i],b=road.points[(i+1)%road.points.length],d=distance(a,b),dx=(b.x-a.x)/d,dz=(b.z-a.z)/d;
-    const centre={x:(a.x+b.x)/2,z:(a.z+b.z)/2};
-    // An opening is cut in BOTH visual fences and collision data at every road junction.
-    if(connections.some(c=>distance(c,centre)<30))continue;
-    for(const side of [-1,1]) barriers.push({x:centre.x+dz*(road.width/2+.75)*side,z:centre.z-dx*(road.width/2+.75)*side,y:(a.y+b.y)/2,w:.5,d:d+.3,h:1.05,yaw:Math.atan2(dx,dz),kind:'barrier'});
-  }
-}
-// Trim inside-corner fence overlaps and crossings against every driveable road.
-for(let i=barriers.length-1;i>=0;i--) {
-  const b=barriers[i];let obstructs=false;
-  for(let t=-.5;t<=.5;t+=.125){const p={x:b.x+Math.sin(b.yaw)*b.d*t,z:b.z+Math.cos(b.yaw)*b.d*t};if(closestRoad(p).distance<4.5){obstructs=true;break;}}
-  if(obstructs)barriers.splice(i,1);
-}
 export const garageWalls=garages.flatMap(g=>[
   {local:[-17,0],w:1,d:44,h:6.5},{local:[17,0],w:1,d:44,h:6.5},{local:[0,-22],w:34,d:1,h:6.5},
   {local:[-4,0],w:15,d:1,h:6.5},

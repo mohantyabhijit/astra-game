@@ -656,7 +656,7 @@ export function createWorld(canvas) {
       const model = trafficCars[i];
       model.position.set(t.x, vehicleSurfaceHeight(t) + 0.025, t.z);
       model.rotation.y = Math.PI - t.heading;
-      model.visible = distance(t, g.player) < 350;
+      model.visible = !t.claimed && distance(t, g.player) < 350;
       model.userData.vehicle.animateWheels(Math.hypot(t.vx, t.vz) * dt, -(t.steer || 0) * 0.38);
     });
     g.police.forEach((c, i) => {
@@ -666,10 +666,11 @@ export function createWorld(canvas) {
     const vehicleStates = g.vehicles?.length
       ? g.vehicles
       : [{ id: "player", type: "sports", name: "Veloce", ...g.player }];
+    for(const [id,visual] of heroCars)if(!vehicleStates.some(v=>v.id===id))visual.visible=false;
     for (const state of vehicleStates) {
       let visual = heroCars.get(state.id);
       if (!visual) {
-        visual = createHeroVehicle(state.type || "sports");
+        visual = state.police ? createPoliceSportsCar(scene).mesh : createHeroVehicle(state.type || "sports", colors[state.color]);
         scene.add(visual);
         heroCars.set(state.id, visual);
       }

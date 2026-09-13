@@ -41,12 +41,12 @@ Free exploration starts immediately; the gem mission is optional. Collected gems
 - **Downtown Marina Bay:** a bounded 1.83 × 1.57 km district with connected roads, bridges and Bayfront Drive. The road network uses a game-scale interpretation of the 2026 Marina Bay circuit.
 - **Landmarks:** imported Merlion and Marina Bay Sands, plus Esplanade, Fullerton and Singapore Flyer. Architectural geometry is a game interpretation, not a surveyed replica; building interiors are not playable.
 - **Characters and city life:** two selectable characters, civilian pedestrians with persistent identities and varied clothing, walking police patrols and ambient traffic.
-- **Vehicles:** 15 usable Jeeps, Minis and sports cars, articulated doors and natural boarding. Driving includes speed-sensitive steering, braking, reverse, handbrake and boost, with a 150 km/h cap.
-- **Chases:** marked police sports cars with flashing lights and sirens. Police track you outside cooldown areas; five uninterrupted seconds parked and unseen inside cover clear the heat.
+- **Vehicles:** 15 parked Jeeps, Minis and sports cars, plus traffic and visible police cars you can take over, with articulated doors and smooth natural boarding. Driving includes speed-sensitive steering, braking, reverse, handbrake and boost, with a 150 km/h cap.
+- **Chases:** marked police sports cars with flashing lights and sirens. A five-second response countdown gives you a head start. Police then track you outside cooldown areas; five uninterrupted seconds parked and unseen inside cover clear the heat.
 - **Consequences:** vehicle impacts knock people down with blood and recovery animations. Officers can shoot and engage at close range. Three distinct police-car impacts lead to an encounter, explosion, flying wobblehead and respawn near Merlion; fatal gunfire also causes respawn.
 - **One optional mission:** board the designated mission sports car and follow directions through 24 gems.
 - **HUD and cameras:** persistent minimap with **M** for the mission and **P** for the police station, route guidance, heat and impact status, cooldown countdown, close chase camera and a live rear-view mirror on the right.
-- **Environment:** four imported tree packs with 20 variants, instanced planting and animated wind. A loading cover keeps scene assembly hidden.
+- **Environment:** four imported tree packs with 20 variants, denser instanced trees and grass with animated wind. Roads have no roadside barriers. A loading cover keeps scene assembly hidden.
 
 This is a playable browser prototype. Multiplayer, a larger mission campaign, interiors, an economy and player-controlled shooting are outside the current scope. Physics and police behavior are arcade approximations.
 

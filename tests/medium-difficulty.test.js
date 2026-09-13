@@ -12,9 +12,9 @@ test('three different starter cars have clear driver-door approaches',()=>{
 });
 function chase(){const g=createGame();startGame(g);g.mode='driving';g.vehicles=[];g.traffic=[];g.pedestrians=[];g.patrols=[];Object.assign(g.player,makeVehicle(0,0),atCircuit(100),{halfL:2.55,halfW:1.14});triggerPursuit(g);return g;}
 const tick=(g,n)=>{for(let i=0;i<n;i++)stepGame(g,{},1/60);};
-test('police allow a full three-second head start without attacks or impacts',()=>{
- const g=chase(),positions=g.police.map(c=>({...c}));assert.equal(g.pursuitDelay,3);assert.ok(positions.every(c=>distance(c,g.player)>=70));
- tick(g,179);assert.ok(g.pursuitDelay>0);assert.ok(g.police.every((c,i)=>distance(c,positions[i])<.01));assert.equal(g.policeHits,0);assert.equal(g.shots.length,0);
+test('police allow a full five-second head start without attacks or impacts',()=>{
+ const g=chase(),positions=g.police.map(c=>({...c}));assert.equal(g.pursuitDelay,5);assert.ok(positions.every(c=>distance(c,g.player)>=70));
+ tick(g,299);assert.ok(g.pursuitDelay>0);assert.ok(g.police.every((c,i)=>distance(c,positions[i])<.01));assert.equal(g.policeHits,0);assert.equal(g.shots.length,0);
  assert.equal(triggerPursuit(g),false);assert.ok(g.pursuitDelay<.1);
  tick(g,60);assert.equal(g.pursuitDelay,0);assert.ok(g.police.some((c,i)=>distance(c,positions[i])>.1));
 });

@@ -4,6 +4,7 @@ import "./style.css";
 import { createWorld } from "./world.js";
 import { GameAudio } from "./audio.js";
 import {
+  availableCars,
   createGame,
   startGame,
   stepGame,
@@ -337,7 +338,7 @@ function hud(now) {
     hits = game.policeHits || 0,
     driving = game.mode === "driving",
     transition = game.transition,
-    near = game.vehicles
+    near = availableCars(game)
       ?.filter((v) => !v.destroyed)
       ?.map((v) => ({ v, d: distance(game.player, v) }))
       .sort((a, b) => a.d - b.d)[0];

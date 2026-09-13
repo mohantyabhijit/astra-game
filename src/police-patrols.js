@@ -1,3 +1,4 @@
+import {walkingPathClear} from './vehicle-access.js';
 import {stepReaction,advanceImpulse} from './wobble/original/impacts.js';
 import {atCircuit,CIRCUIT_LENGTH,walkingSurfaceHeight} from './district.js';
 import {driveableConnector,resolveWorldCollision} from './collision-world.js';
@@ -47,7 +48,7 @@ export function stepPolicePatrols(g,dt) {
     const next={x:c.x+Math.sin(c.heading)*step,z:c.z-Math.cos(c.heading)*step};
     const parked=g.vehicles.some(v=>!v.destroyed&&distance(next,v)<(v.halfL||2.5)+.4);
     const moving=g.mode==='driving'&&distance(next,g.player)<3;
-    c.speed=driveableConnector(c,next,.4)&&!parked&&!moving?speed:0;
+    c.speed=driveableConnector(c,next,.4)&&!parked&&!moving&&walkingPathClear(g,c,next)?speed:0;
     c.vx=Math.sin(c.heading)*c.speed;c.vz=-Math.cos(c.heading)*c.speed;
     c.x+=c.vx*dt;c.z+=c.vz*dt;resolveWorldCollision(c);c.y=walkingSurfaceHeight(c);
   }
@@ -75,5 +76,5 @@ export function stepDeployedOfficer(g,c,dt){
  c.officerHeading=Math.atan2(goal.x-p.x,-(goal.z-p.z));
  c.officerSpeed=range>1.05&&!c.reaction&&!c.attack&&!(c.hitstun>0)?4.5:0;
  const step=Math.min(c.officerSpeed*dt,distance(p,goal)),next={x:p.x+Math.sin(c.officerHeading)*step,z:p.z-Math.cos(c.officerHeading)*step};
- if(driveableConnector(p,next,.4)&&g.vehicles.concat(g.police).every(v=>v.destroyed||distance(next,v)>(v.halfW||1.1)+.6))Object.assign(p,next,{y:walkingSurfaceHeight(next)});else c.officerSpeed=0;
+ if(driveableConnector(p,next,.4)&&walkingPathClear(g,p,next))Object.assign(p,next,{y:walkingSurfaceHeight(next)});else c.officerSpeed=0;
 }

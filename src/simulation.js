@@ -1,4 +1,6 @@
 import {resetJump, stepJump} from "./jumping.js";
+import {availableCars,walkingPathClear,separateWalker} from './vehicle-access.js';
+export {availableCars} from './vehicle-access.js';
 import {resolvePoliceShot} from './police-ballistics.js';
 import {stepMelee} from './melee.js';
 export {punch} from './melee.js';
@@ -51,7 +53,7 @@ export const BUILDINGS = buildings,
   COOLDOWN_SECONDS = 5,
   TRANSITION_SECONDS = 3.6,
   EXPLOSION_SECONDS = 3,
-  POLICE_RESPONSE_SECONDS = 3,
+  POLICE_RESPONSE_SECONDS = 5,
   POLICE_IMPACT_GRACE_SECONDS = 2;
 export const makeVehicle = (x, z, heading = 0) => ({
   x,
@@ -109,7 +111,7 @@ function safeExit(g) {
   const candidate = { x: car.x + f.z * 2.3 - f.x, z: car.z - f.x * 2.3 - f.z };
   if (!driveableConnector(car, candidate, 0.45)) return null;
   if (
-    g.vehicles.some(
+    availableCars(g).some(
       (v) =>
         v.id !== g.activeVehicleId &&
         !v.destroyed &&
@@ -152,6 +154,8 @@ export function createGame(saved = []) {
       p = atCircuit(along, 4.2, direction);
     return {
       ...makeVehicle(p.x, p.z, p.heading),
+      id: `traffic-${i}`,
+      name: `City ${["Jeep", "Sports Car", "Mini"][i % 3]}`,
       y: p.y,
       along,
       direction,
@@ -239,6 +243,8 @@ export function createGame(saved = []) {
     police: Array.from({ length: 3 }, (_, i) => ({
       ...makeVehicle(0, 0),
       id: `police-${i}`,
+      type: "sports",
+      name: "Police Sports Car",
       visible: false,
       path: null,
       pathTimer: 0,
@@ -320,7 +326,7 @@ export function updateGuidance(g) {
   return g.guidance;
 }
 const nearestVehicle = (g, max = 7) =>
-  g.vehicles
+  availableCars(g)
     .map((v) => ({ v, d: distance(g.player, v) }))
     .filter((x) => !x.v.destroyed && x.d <= max)
     .sort((a, b) => a.d - b.d)[0]?.v || null;
@@ -329,10 +335,16 @@ export function interact(g) {
     return false;
   if (g.mode === "foot") {
     if (g.player.grounded === false) return false;
-    const v = nearestVehicle(g);
+    let v = nearestVehicle(g);
     if (!v) return false;
-    const path=boardingRoute(g.player,v,g.vehicles);
+    const path=boardingRoute(g.player,v,availableCars(g));
     if(!path){emit(g,"The driver’s door is blocked · approach from another side","warning");return false;}
+    if (!g.vehicles.includes(v)) {
+      const source=v, police=g.police.includes(source);
+      v={...source,id:`owned-${source.id}-${g.vehicles.length}`,name:source.name || 'Police Sports Car',type:source.type || 'sports',police,visible:true,destroyed:false,vx:0,vz:0,speed:0};
+      source.claimed=true;source.visible=false;source.officerActive=false;source.vx=source.vz=source.speed=0;
+      g.vehicles.push(v);
+    }
     g.player.vx=g.player.vz=g.player.speed=0;
     g.mode = "boarding";
     g.activeVehicleId = v.id;
@@ -340,7 +352,8 @@ export function interact(g) {
       progress: 0,
       phase: "approach",
       path,
-      duration: TRANSITION_SECONDS,
+      duration: 2.8,
+      approachSpeed: 0,
       vehicleId: v.id,
     };
     emit(g, `Entering ${v.name}`);
@@ -426,6 +439,7 @@ export function triggerPursuit(g) {
       ...makeVehicle(p.x, p.z, p.heading),
       y: p.y,
       visible: true,
+      claimed: false,
       path: null,
       pathTimer: 0,
       lastSeen: { x: g.player.x, z: g.player.z, y: g.player.y },
@@ -435,7 +449,7 @@ export function triggerPursuit(g) {
       searchingCourt: false,
     });
   });
-  emit(g, "POLICE ALERT · 3-second head start · Follow the amber route", "warning");
+  emit(g, `POLICE ALERT · ${POLICE_RESPONSE_SECONDS}-second head start · Follow the amber route`, "warning");
   updateGuidance(g);
   return true;
 }
@@ -618,7 +632,11 @@ function transitionStep(g, dt) {
   const v = g.vehicles.find((x) => x.id === t.vehicleId);
   if(!v||v.destroyed){g.transition=null;g.mode='foot';g.activeVehicleId=null;return;}
   if(g.mode==='boarding'&&t.phase==='approach'){
-    const goal=t.path[0],d=distance(g.player,goal),step=Math.min(d,1.65*dt);
+    const goal=t.path[0],d=distance(g.player,goal);
+    // Ease into a brisk walk and brake gently at the handle, without stopping at corners.
+    const targetSpeed=t.path.length===1?Math.min(2.15,Math.sqrt(8*d)):2.15;
+    t.approachSpeed+=(targetSpeed-t.approachSpeed)*(1-Math.exp(-10*dt));
+    const step=Math.min(d,t.approachSpeed*dt);
     if(d>.001){const dx=(goal.x-g.player.x)/d,dz=(goal.z-g.player.z)/d;
       const next={x:g.player.x+dx*step,z:g.player.z+dz*step};
       if(!driveableConnector(g.player,next,.3)){g.transition=null;g.mode='foot';g.activeVehicleId=null;emit(g,'Door approach blocked','warning');return;}
@@ -630,8 +648,8 @@ function transitionStep(g, dt) {
   }
   if(g.mode==='boarding'&&t.phase==='align'){
     const delta=angleDelta(v.heading+Math.PI/2,g.player.heading);
-    g.player.heading+=clamp(delta,-3.5*dt,3.5*dt);
-    if(Math.abs(delta)<.015){t.phase='motion';t.boardPosition={x:g.player.x,z:g.player.z};}return;
+    g.player.heading+=clamp(delta*(1-Math.exp(-12*dt)),-5*dt,5*dt);
+    if(Math.abs(delta)<.015){g.player.heading=v.heading+Math.PI/2;t.phase='motion';t.boardPosition={x:g.player.x,z:g.player.z};}return;
   }
   t.progress = Math.min(1, t.progress + dt / t.duration);
   if(g.mode==='boarding'){
@@ -815,6 +833,7 @@ export function stepGame(g, input = {}, dt) {
   stepPolicePatrols(g,dt);
   for (const c of g.police) policeStep(g, c, dt);
   for (const t of g.traffic) {
+    if(t.claimed)continue;
     const current = t.publicRoad
       ? atPublicRoad(t.publicRoad, t.along)
       : atCircuit(t.along, 4.2, t.direction);
@@ -835,7 +854,7 @@ export function stepGame(g, input = {}, dt) {
   const movers = [
     ...(g.mode === "driving" ? [g.player] : []),
     ...g.police.filter((c) => c.visible),
-    ...g.traffic,
+    ...g.traffic.filter(t=>!t.claimed),
   ];
   for (const c of movers) {
     c.hit = Math.max(0, c.hit - dt);
@@ -944,7 +963,7 @@ export function stepGame(g, input = {}, dt) {
         if(r.phase === "falling" || r.phase === "down")advanceImpulse(r,dt,delta);
         else if(r.phase === "fleeing") {p.heading=Math.atan2(r.dx,-r.dz);delta.x=r.dx*3.7*dt;delta.z=r.dz*3.7*dt;p.walking=true;p.speed=3.7;}
         const next={x:p.x+delta.x,z:p.z+delta.z};
-        if(driveableConnector(p,next,.4)){p.x=next.x;p.z=next.z;}
+        if(driveableConnector(p,next,.4)&&walkingPathClear(g,p,next)){p.x=next.x;p.z=next.z;}
         if(r.phase==="down"&&!r.groundBlood){r.groundBlood=true;g.pedestrianImpacts.push({x:p.x,y:p.y||0,z:p.z,dx:r.dx*.2,dz:r.dz*.2,time:g.elapsed});if(g.pedestrianImpacts.length>16)g.pedestrianImpacts.shift();}
         continue;
       }
@@ -982,8 +1001,7 @@ export function stepGame(g, input = {}, dt) {
       next = atCircuit(p.along + p.speed * p.direction * dt, 14 * p.side);
       next.heading += p.direction < 0 ? Math.PI : 0;
     }
-    const safe = driveableConnector(p, next, 0.4) && movers.every(c => distance(c, next) > 4)
-      && g.vehicles.filter(v => !v.destroyed).every(c => distance(c, next) > 3)
+    const safe = driveableConnector(p, next, 0.4) && walkingPathClear(g,p,next)
       && g.pedestrians.every(other => other === p || other.hit || distance(other, next) > 0.65 || distance(other, next) > distance(other, p));
     if (safe) {
       p.along += p.speed * p.direction * dt;
@@ -1017,6 +1035,7 @@ export function stepGame(g, input = {}, dt) {
       if (p.wanderRoad) p.waypoint = Math.max(0, Math.min(p.wanderRoad.points.length - 1, p.waypoint + p.direction));
     }
   }
+  for(const p of [...g.pedestrians,...g.patrols])separateWalker(g,p);
   if (!g.explosion) pursuit(g, dt);
   policeShooting(g,dt);
   if (g.mode === "driving" && !g.explosion) {

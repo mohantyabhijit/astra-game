@@ -76,11 +76,11 @@ export function addEnvironmentAssets(scene,fallbackTrees) {
    const placement={...p,scale:(9+random()*5)/variant.size.y,rotation:random()*Math.PI*2};
    variant.placements.push(placement);trees.push(placement);
   }
-  for(const road of roads)for(let i=1;i<road.points.length;i+=3){
+  for(const road of roads)for(let i=1;i<road.points.length;i+=2){
    const a=road.points[i-1],b=road.points[i],length=Math.hypot(b.x-a.x,b.z-a.z)||1;
    for(const side of [-1,1])plant({x:b.x-(b.z-a.z)/length*(road.width/2+12)*side,z:b.z+(b.x-a.x)/length*(road.width/2+12)*side,y:b.y||0});
   }
-  for(let s=8;s<CIRCUIT_LENGTH;s+=8)for(const side of [-1,1])for(let row=0;row<2;row++){
+  for(let s=8;s<CIRCUIT_LENGTH;s+=6)for(const side of [-1,1])for(let row=0;row<3;row++){
    const p=atCircuit(s+random()*5,(16.5+row*3.5+random()*2)*side);if(surfaceClear(p))tufts.push({...p,scale:(.8+random()*.7)/grass.size.x,squash:.55,rotation:random()*Math.PI*2});
   }
   for(const variant of variants)for(const part of variant.parts){const batches=instances(scene,part,variant.placements,time,'tree');for(const mesh of batches){mesh.name=`wobble-tree-${variant.pack}-${variant.index}`;mesh.userData.treePack=variant.pack;}treeBatches.push(...batches);}
