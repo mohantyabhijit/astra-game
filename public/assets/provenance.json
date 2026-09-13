@@ -1,0 +1,42 @@
+[
+  {
+    "name": "reference",
+    "file": "reference.webp",
+    "jobId": "198e15ea-f1f3-4200-b113-a22a781d5926",
+    "provider": "Higgsfield",
+    "model": "gpt_image_2",
+    "prompt": "Cinematic visual reference for an original 3D arcade driving game MIDNIGHT RUN. A low wide cream-white retro sports coupe with dark panoramic windows and coral-red tail lights being chased by two black-and-white police cruisers through a spacious coastal city boulevard at blue hour. Cyan glass office towers, warm lit brick warehouses, orange street lights, indigo night sky, dry charcoal road with yellow center stripes. Three-quarter rear low chase camera, car large lower center, road stretching ahead, geometric stylized premium indie game art, crisp readable silhouettes, restrained neon teal and amber, moody but clearly visible. No text, no UI, no logos. Wide 16:9.",
+    "original": "art/originals/reference.png",
+    "processing": "Resized and encoded as WebP; source image preserved in repository."
+  },
+  {
+    "name": "asphalt",
+    "file": "asphalt.webp",
+    "jobId": "bef97481-fa8f-4977-8e35-4a1c236991ed",
+    "provider": "Higgsfield",
+    "model": "gpt_image_2",
+    "prompt": "Seamless tileable game texture of dark charcoal asphalt, top-down perfectly orthographic flat surface, fine grey aggregate subtle hairline wear, very low contrast, dry nighttime asphalt albedo, no road lines, no markings, no objects, no perspective, no lighting gradients. Uniform edge to edge material. Square 1:1.",
+    "original": "art/originals/asphalt.png",
+    "processing": "Resized and encoded as WebP; source image preserved in repository."
+  },
+  {
+    "name": "facade",
+    "file": "facade.webp",
+    "jobId": "21a0fa6d-22f8-4a77-80a7-cd6d5eb059a1",
+    "provider": "Higgsfield",
+    "model": "gpt_image_2",
+    "prompt": "Seamless tileable game building facade texture, perfectly straight-on orthographic elevation of a modern blue-grey office building. Grid of exactly eight columns and eight rows of rectangular windows with thin dark steel mullions. Most windows deep navy glass, scattered warm pale amber illuminated windows and muted turquoise windows. Flat diffuse evenly lit material with subtle glass detail, no perspective, no roof, no ground, no people, no text, no logos. Pattern continues edge to edge. Square 1:1.",
+    "original": "art/originals/facade.png",
+    "processing": "Resized and encoded as WebP; source image preserved in repository."
+  },
+  {
+    "name": "vehicle",
+    "file": "vehicle.webp",
+    "jobId": "8b4ec0a8-a172-4c5a-83dd-15259f366f20",
+    "provider": "Higgsfield",
+    "model": "gpt_image_2",
+    "prompt": "Seamless tileable sports car paint material texture, warm ivory white pearl metallic automotive paint with extremely subtle fine metallic grain and a few faint panel-surface scuffs. Perfectly flat close-up orthographic albedo surface, neutral even lighting, no gradients, no highlights, no reflections, no objects, no logos, no symbols. Elegant cream white base color, near-uniform surface. Square 1:1.",
+    "original": "art/originals/vehicle.png",
+    "processing": "Resized and encoded as WebP; source image preserved in repository."
+  }
+]

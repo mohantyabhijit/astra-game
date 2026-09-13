@@ -1,0 +1,44 @@
+{
+  "status": "won",
+  "outcome": "You lost the tail. The city is yours.",
+  "seconds": 37.32,
+  "checkpoint": 5,
+  "health": 100,
+  "score": 13914,
+  "collisions": 1,
+  "nearMisses": 3,
+  "waypoint": 10,
+  "player": {
+    "x": 168.47,
+    "z": 89.97
+  },
+  "escape": 5,
+  "nearestCop": 160.54911698856975,
+  "milestones": [
+    {
+      "checkpoint": 1,
+      "seconds": 3.79,
+      "health": 89
+    },
+    {
+      "checkpoint": 2,
+      "seconds": 11.63,
+      "health": 100
+    },
+    {
+      "checkpoint": 3,
+      "seconds": 17.13,
+      "health": 100
+    },
+    {
+      "checkpoint": 4,
+      "seconds": 25.38,
+      "health": 100
+    },
+    {
+      "checkpoint": 5,
+      "seconds": 31.26,
+      "health": 100
+    }
+  ]
+}
