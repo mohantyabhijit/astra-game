@@ -1,6 +1,8 @@
 # Wobble City
 
-**Play on desktop:** [Wobble City](https://wobble-city.vercel.app)
+**Play on desktop:** [tinyurl.com/wobble-city](https://tinyurl.com/wobble-city) · [ChatGPT Sites](https://wobble-city.mohantyabhijit.chatgpt.site)
+
+Both versions are public. Use a desktop or laptop with a keyboard.
 
 A desktop-only, single-player 3D game set around Singapore’s Marina Bay. Choose a wobblehead character, explore the waterfront, get into cars, collect gems and escape the police.
 
@@ -8,17 +10,28 @@ Built with Three.js and Vite, combining the `astra-game` city and simulation wit
 
 ![Wobble City with rear-view mirror](artifacts/rear-view-mirror.png)
 
-## Play
+## Modes
 
-Use a desktop or laptop with a keyboard and a WebGL 2 browser. Phones and tablets display a desktop-required message and do not load the game assets.
+- **Free roam:** choose Kai or Rae, watch the Merlion introduction, then explore on foot or in a car. No race starts automatically.
+- **Marina Gem Run:** an optional driving mission. Visit **M** on the map and enter the designated mission sports car to begin.
+- **Police pursuit:** hitting a person with a car or punching someone starts a chase. Escape to a cooldown area to return to free roam.
 
-1. Choose **Kai** or **Rae** from the animated character selection.
-2. Watch the camera circle the Merlion and settle behind your character.
-3. Explore on foot or press **E** near a usable car. Your character walks around it, opens the driver’s door and gets in.
-4. Visit **M** when you want to begin the optional 24-gem driving mission.
-5. Hitting civilians or walking officers alerts the police. Follow the route to cover and stay parked and unseen for **5 seconds** to clear the pursuit.
+## How to avoid the police
 
-Free exploration starts immediately; the gem mission is optional. Collected gems survive pursuits and respawns, and exploration continues after mission completion.
+Drive around pedestrians and officers, and avoid punching people. If you trigger a pursuit, two police cars follow slowly for the first **5 seconds**, then speed up. Use the countdown to gain distance and the rear-view mirror to watch behind you.
+
+Follow the **amber route** to a **◇ cooldown area**, get behind cover, and stop. Once you are out of police sight, the on-screen **5-second cooldown** begins. Stay parked and hidden until **HEAT CLEARED** appears. Moving, leaving cover or being spotted resets the countdown; simply driving far away does not end the chase.
+
+Three distinct police-car impacts cause an explosion and respawn near the Merlion. Your collected gems are preserved. **P** marks the police station, not a safe zone.
+
+## How to collect gems and win
+
+1. Follow **M** to the mission and press **E** beside its sports car to get in.
+2. Follow the guided route and drive through the glowing gems. Each gem gives **500 points** and restores some boost.
+3. Gems can only be collected while driving with the mission active and the police heat cleared. If chased, finish the cooldown, then resume collecting.
+4. Collect **all 24 gems** to complete Marina Gem Run and earn a **3,000-point completion bonus**.
+
+Completing the gem mission is the win condition. Free roam continues afterward, so you can keep exploring; there is no final game-over screen or mandatory race. Mission progress survives pursuits and respawns.
 
 ## Controls
 
@@ -49,6 +62,16 @@ Free exploration starts immediately; the gem mission is optional. Collected gems
 - **Environment:** four imported tree packs with 20 variants, denser instanced trees and grass with animated wind. Roads have no roadside barriers. A loading cover keeps scene assembly hidden.
 
 This is a playable browser prototype. Multiplayer, a larger mission campaign, interiors, an economy and player-controlled shooting are outside the current scope. Physics and police behavior are arcade approximations.
+
+## How we built it
+
+**Computer use and playtesting.** Codex used browser computer-use tools to open the game in Chrome, interact with the character selector and controls, and inspect the running world, HUD and loading screens. We used those observations to refine the game and verify the hosted versions. Automated Playwright scenarios exercised driving, boarding, police impacts, respawn, mission progress and cooldown; simulation tests checked the underlying rules. Some automated fixtures place actors directly to reproduce a specific situation.
+
+**Trees and environment assets.** The first environment assets included user-supplied Meshy-generated road, tree and groundcover GLBs. We prepared smaller runtime copies by optimizing embedded textures. The current tree collection comes from four Quaternius CC0 packs imported through Wobble Heads: palms, broadleaf, birch and pine, with 20 variants in total. Code places trees and grass around the district, renders repeated plants in batches, and adds wind bending and leaf flutter while keeping roots anchored.
+
+**Characters, cars and landmarks.** We integrated the Wobble Heads repository’s character rigs, articulated vehicles and landmark assets into the Marina Bay game. Kai and Rae use existing character models with their upstream credits retained; civilian rigs receive varied clothing colours. The Merlion uses a credited sculpt, while Marina Bay Sands uses geometry authored in Wobble Heads from architectural references. Roads, buildings and city details combine procedural geometry with imported models. See the asset credits below for provenance and licenses.
+
+**Movement and animation.** Wobble Heads supplies procedural posing, inverse kinematics for connected arms and legs, and damped spring motion for the wobbleheads. We adapted these to walking, dancing, jumping, punching, reactions and falling. Boarding combines a path around the vehicle with door, hand and seat animations. Driving uses arcade steering, acceleration, braking and wheel animation; pedestrians follow city routes, avoid obstacles and choose another clear route when blocked. All of this runs locally in Three.js in the browser.
 
 ## Run locally
 
