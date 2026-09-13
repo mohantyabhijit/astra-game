@@ -396,7 +396,7 @@ function hud(now) {
     game.phase === "free"
       ? "CITY CLEAR"
       : game.pursuitDelay > 0
-        ? `POLICE RESPOND IN ${Math.ceil(game.pursuitDelay)}s`
+        ? `SLOW PURSUIT · ${Math.ceil(game.pursuitDelay)}s`
       : game.phase === "cooldown"
         ? "COOLING DOWN"
         : game.seen

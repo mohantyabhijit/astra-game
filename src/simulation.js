@@ -55,6 +55,7 @@ export const BUILDINGS = buildings,
   TRANSITION_SECONDS = 3.6,
   EXPLOSION_SECONDS = 3,
   POLICE_RESPONSE_SECONDS = 5,
+  POLICE_HEAD_START_SPEED = 20 / 3.6,
   POLICE_IMPACT_GRACE_SECONDS = 2;
 export const makeVehicle = (x, z, heading = 0) => ({
   x,
@@ -493,9 +494,8 @@ function steerAI(c, target, cruise, dt) {
   c.speed = Math.hypot(c.vx, c.vz);
 }
 function policeStep(g, c, dt) {
-  if(g.pursuitDelay>0){c.vx=c.vz=c.speed=0;c.officerActive=false;return;}
   if (!c.visible) {c.officerActive=false;return;}
-  c.officerActive=g.mode==="foot" && (g.meleeAlert || distance(c,g.player)<27) && g.phase!=="free";
+  c.officerActive=!(g.pursuitDelay>0)&&g.mode==="foot" && (g.meleeAlert || distance(c,g.player)<27) && g.phase!=="free";
   if(c.officerActive){steerAI(c,c,0,dt);if(g.meleeAlert)stepDeployedOfficer(g,c,dt);return;}
   const visible = hasLineOfSight(c, g.player);
   const playerCourt = garages.find(area => area.contains(g.player));
@@ -535,7 +535,9 @@ function policeStep(g, c, dt) {
     target,
     arrived
       ? 0
-      : searchingCourt || inServiceApproach
+      : g.pursuitDelay > 0
+        ? POLICE_HEAD_START_SPEED
+        : searchingCourt || inServiceApproach
         ? 8
         : MAX_CAR_SPEED * .88,
     dt,

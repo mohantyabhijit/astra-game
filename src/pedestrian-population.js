@@ -24,6 +24,8 @@ for(const road of roads){
 export function populateNearbyPedestrians(g){
   let nearby=g.pedestrians.filter(p=>!p.hit&&distance(p,g.player)<130).length;
   if(nearby>=20)return;
+  const distant=g.pedestrians.filter(p=>distance(p,g.player)>=260&&!p.hit&&!p.reaction);
+  if(!distant.length)return;
   const cars=availableCars(g);
   // Plazas and open spaces also need routes where no sidewalk is close enough.
   // Snap to a world grid so these walks stay fixed when the player moves.
@@ -43,10 +45,9 @@ export function populateNearbyPedestrians(g){
     return range>=35&&range<120 && cars.every(c=>distance(c,r.start)>8)
       && walkingPathClear(g,r.start,r.end);
   });
-  for(const p of g.pedestrians){
+  // Keep visible people and their current walks in place in both travel modes.
+  for(const p of distant){
     if(nearby>=20)break;
-    // Keep visible people and their current walks in place in both travel modes.
-    if(distance(p,g.player)<260||p.hit||p.reaction)continue;
     for(let attempt=0;attempt<candidates.length;attempt++){
       const route=candidates[(p.appearance+attempt)%candidates.length];
       if(g.pedestrians.some(other=>other!==p&&distance(other,route.start)<3.2))continue;
