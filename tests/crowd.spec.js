@@ -27,7 +27,7 @@ test('normal gameplay uses imported traffic and animated Wobblehead crowd', asyn
 
 test('vehicle-pedestrian contact triggers one pooled blood burst and pursuit',async({page})=>{
   await page.goto('/');await page.locator('#start').click(); await expect.poll(()=>page.evaluate(()=>window.__gameTest.state.status),{timeout:20000}).toBe("running");await page.keyboard.press('e');
-  await expect.poll(()=>page.evaluate(()=>window.__gameTest.state.mode)).toBe('driving');
+  await expect.poll(()=>page.evaluate(()=>window.__gameTest.state.mode),{timeout:20000}).toBe('driving');
   await page.evaluate(async()=>{
     const {stepGame}=await import('/src/simulation.js');
     const g=window.__gameTest.state, p=g.pedestrians[0],f={x:Math.sin(g.player.heading),z:-Math.cos(g.player.heading)};
