@@ -156,7 +156,8 @@ test("a moving vehicle hitting a pedestrian starts pursuit without changing miss
   stepGame(g, {}, 1 / 60);
   assert.equal(g.phase, "pursuit");
   assert.equal(g.collected.length, 1);
-  assert.ok(g.police.every((c) => c.visible));
+  assert.equal(g.police.filter((c) => c.visible).length, 2);
+  assert.equal(g.pursuitDelay, 5);
 });
 test("a stationary overlap with a pedestrian does not start pursuit", () => {
   const g = createGame();

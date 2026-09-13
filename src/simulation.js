@@ -1,3 +1,4 @@
+import {populateNearbyPedestrians} from './pedestrian-population.js';
 import {resetJump, stepJump} from "./jumping.js";
 import {availableCars,walkingPathClear,separateWalker} from './vehicle-access.js';
 export {availableCars} from './vehicle-access.js';
@@ -438,7 +439,7 @@ export function triggerPursuit(g) {
     Object.assign(c, {
       ...makeVehicle(p.x, p.z, p.heading),
       y: p.y,
-      visible: true,
+      visible: i < 2,
       claimed: false,
       path: null,
       pathTimer: 0,
@@ -932,27 +933,7 @@ export function stepGame(g, input = {}, dt) {
   g.populationTimer = (g.populationTimer || 0) - dt;
   if (g.populationTimer <= 0) {
     g.populationTimer = 2;
-    let nearby = g.pedestrians.filter(p => !p.hit && distance(p,g.player) < 130).length;
-    for (const p of g.pedestrians) {
-      if (nearby >= 20) break;
-      if (distance(p,g.player) < 260 || p.hit) continue;
-      for (let attempt=0; attempt<12; attempt++) {
-        const angle = g.player.heading + Math.PI + ((p.appearance + attempt*7)%17-8)*.15;
-        const radius = 65 + (p.appearance + attempt*13)%45;
-        const point = {x:g.player.x+Math.sin(angle)*radius,z:g.player.z-Math.cos(angle)*radius,y:0};
-        const road = closestRoad(point);
-        if (road.distance < road.road.width/2) {
-          point.x = road.x + Math.cos(road.heading)*(road.road.width/2+2);
-          point.z = road.z + Math.sin(road.heading)*(road.road.width/2+2);
-          point.y = road.y;
-        }
-        const target = {x:point.x+Math.cos(angle)*12,z:point.z+Math.sin(angle)*12,y:point.y};
-        if (!driveableConnector(point,target,.6) || inWater(point) || inWater(target)) continue;
-        if (g.vehicles.some(v=>distance(v,point)<5) || g.pedestrians.some(other=>other!==p&&distance(other,point)<3)) continue;
-        Object.assign(p,point,{wanderRoad:{points:[{...point},target]},waypoint:1,direction:1,pause:0});
-        nearby++; break;
-      }
-    }
+    populateNearbyPedestrians(g);
   }
   for (const p of g.pedestrians) {
     if(p.hitstun>0&&!p.reaction){p.walking=false;continue;}
