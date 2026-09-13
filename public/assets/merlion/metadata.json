@@ -1,0 +1,27 @@
+{
+  "name": "Singapore Merlion ReSculpt",
+  "creator": "cymon",
+  "originalCreator": "keeganTeo",
+  "source": "https://www.thingiverse.com/thing:5533885",
+  "originalSource": "https://www.thingiverse.com/thing:1698961",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "sourceSHA256": "4a87a212f4b95d3ca03a25cf9ff0c42f4c69edacd874d7e31796c8b08f85ccba",
+  "originalTriangles": 412672,
+  "triangles": 80000,
+  "bytes": 2081000,
+  "height": 8.6,
+  "bounds": [
+    [
+      -1.5792218639834306,
+      0.0,
+      -2.404313390777226
+    ],
+    [
+      1.5792218639834306,
+      8.600000000000001,
+      2.404313390777226
+    ]
+  ],
+  "changes": "Quadric simplification to 80k faces, Y-up orientation, centered base, uniform 8.6m scale, smooth normals and baked cavity vertex colors; game stone material and fountain added separately."
+}

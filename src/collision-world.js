@@ -1,4 +1,4 @@
-import { obstacles, inWater, closestRoad } from './district.js';
+import { obstacles, inWater, closestRoad, WORLD_BOUNDS } from './district.js';
 import { collideBuildings } from './physics.js';
 
 const size=40, cells=new Map();
@@ -14,6 +14,11 @@ export function nearbyObstacles(p,r=5) {
   return [...set];
 }
 export function resolveWorldCollision(car) {
+  const margin=car.halfW||.45;
+  const x=Math.max(WORLD_BOUNDS.minX+margin,Math.min(WORLD_BOUNDS.maxX-margin,car.x));
+  const z=Math.max(WORLD_BOUNDS.minZ+margin,Math.min(WORLD_BOUNDS.maxZ-margin,car.z));
+  if(x!==car.x){car.x=x;car.vx=0;}if(z!==car.z){car.z=z;car.vz=0;}
+
   let impact=0;
   for(const o of nearbyObstacles(car)) {
     const yaw=o.yaw||0,c=Math.cos(yaw),s=Math.sin(yaw),dx=car.x-o.x,dz=car.z-o.z;
@@ -44,6 +49,8 @@ export function segmentBlocked(a,b,padding=0,opaqueOnly=false) {
   return false;
 }
 export function driveableConnector(a,b,padding=1.5) {
+  if(b.x<WORLD_BOUNDS.minX+padding||b.x>WORLD_BOUNDS.maxX-padding||b.z<WORLD_BOUNDS.minZ+padding||b.z>WORLD_BOUNDS.maxZ-padding)return false;
+
   if(segmentBlocked(a,b,padding))return false;
   const d=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.ceil(d/8));
   for(let i=0;i<=steps;i++) {

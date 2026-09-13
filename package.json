@@ -6,12 +6,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test tests/simulation.test.js",
+    "test": "node --test tests/*.test.js",
     "test:browser": "playwright test",
     "test:route": "node tests/route-playtest.js",
     "assets": "node scripts/prepare-assets.js",
     "test:gameplay": "node tests/gameplay-playtest.js",
-    "assets:models": "node scripts/prepare-models.js"
+    "assets:models": "node scripts/prepare-models.js",
+    "test:cooldown": "node tests/cooldown-all.js"
   },
   "keywords": [],
   "author": "",

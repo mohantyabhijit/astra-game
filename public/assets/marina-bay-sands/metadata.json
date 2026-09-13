@@ -1,0 +1,9 @@
+{
+  "name": "Marina Bay Sands — game interpretation",
+  "triangles": 36072,
+  "meshes": 8,
+  "bytes": 2603040,
+  "source": "prototype/js/marina-bay-sands.js",
+  "reference": "https://www.safdiearchitects.com/projects/marina-bay-sands-hotel-and-skypark",
+  "note": "Original reference-based game geometry; not a surveyed architectural replica."
+}

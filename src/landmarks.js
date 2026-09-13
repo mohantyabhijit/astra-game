@@ -1,12 +1,13 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { box, mat } from './render-utils.js';
 import { landmarks } from './district.js';
 
 export function addLandmarks(scene,glass,stone) {
   const ivory=mat('#e9e7db',{roughness:.6}),steel=mat('#d8e2e4',{metalness:.5,roughness:.45}),green=mat('#4d813e'),dark=mat('#387f8d',{roughness:.26,metalness:.4});
-  const made=[];
+  const made=[],pending=[];
   for(const l of landmarks) {
-    const group=new THREE.Group();group.position.set(l.x,0,l.z);group.rotation.y=l.yaw;scene.add(group);made.push(group);
+    const group=new THREE.Group();group.position.set(l.x,0,l.z);group.rotation.y=l.yaw;group.name=l.id;scene.add(group);made.push(group);
     if(l.id==='singapore_flyer') {
       box(group,0,2,0,72,4,30,stone);
       for(const z of [-3.2,3.2]) {
@@ -23,30 +24,35 @@ export function addLandmarks(scene,glass,stone) {
       for(const s of [-1,1]) {const leg=box(group,s*15,43,0,3.2,91,3.2,ivory);leg.rotation.z=s*.35;}
       const axle=new THREE.Mesh(new THREE.CylinderGeometry(3.3,3.3,14,16),steel);axle.rotation.x=Math.PI/2;axle.position.y=90;group.add(axle);
     } else if(l.id==='marina_bay_sands') {
-      box(group,0,4,0,290,8,75,ivory);
-      for(const x of [-102,0,102]) {
-        for(const side of [-1,1]) {
-          const tower=box(group,x+side*13,99,side*10,29,190,45,glass[1]);tower.rotation.z=side*.055;
-          for(let y=10;y<196;y+=5.4)box(group,x+side*13+(99-y)*Math.sin(side*.055),y,side*10+23,29,.42,.6,ivory);
-        }
-      }
-      const shape=new THREE.Shape();shape.moveTo(-175,-18);shape.bezierCurveTo(-195,-10,-191,12,-162,20);shape.lineTo(164,20);shape.bezierCurveTo(190,15,193,-15,165,-21);shape.closePath();
-      const deck=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:7,bevelEnabled:true,bevelSize:2,bevelThickness:2,bevelSegments:2,steps:1}),ivory);
-      deck.rotation.x=-Math.PI/2;deck.position.y=200;group.add(deck);
-      box(group,0,208,0,280,1.2,28,green);box(group,-50,209,0,125,.3,13,mat('#398b9b',{roughness:.25,metalness:.2}));
-      for(let x=65;x<160;x+=12) {box(group,x,211,0,1,7,1,stone);const crown=new THREE.Mesh(new THREE.SphereGeometry(4.4,8,6),green);crown.position.set(x,215,0);group.add(crown);}
+      // Upstream model is authored in metres, with +Z facing the bay.
+      group.rotation.y=l.yaw+Math.PI;
+      pending.push(new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/marina-bay-sands/marina-bay-sands.glb`).then(asset=>{
+        const model=asset.scene;
+        model.position.set(10,.6,0); // Centre the plinth and seat its underside on ground.
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        group.add(model);
+        group.userData.sourceCommit='94be054';
+        group.userData.importedModel=true;
+      }));
     }else if(l.id==='esplanade') {
       box(group,0,4,0,118,8,76,glass[2]);
-      const shade=mat('#b4bcaa',{metalness:.35,roughness:.65});
+      const shade=mat('#71939a',{metalness:.5,roughness:.28});
       for(const x of [-30,30]) {
         const dome=new THREE.Mesh(new THREE.SphereGeometry(1,32,20,0,Math.PI*2,0,Math.PI/2),shade);dome.position.set(x,8,0);dome.scale.set(28,24,37);group.add(dome);
-        const spikes=new THREE.InstancedMesh(new THREE.ConeGeometry(1.35,3,3),ivory,360),dummy=new THREE.Object3D();let n=0;
-        for(let row=1;row<=10;row++)for(let col=0;col<36;col++) {
-          const phi=row/11*Math.PI/2,a=col/36*Math.PI*2+(row%2)*.085;
+        // Individual triangular aluminium sunshades follow the ellipsoid normals.
+        const finGeometry=new THREE.BufferGeometry();
+        finGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-1.6,0,-1.3,1.6,0,-1.3,0,1.1,1.8],3));finGeometry.computeVertexNormals();
+        const fins=new THREE.InstancedMesh(finGeometry,new THREE.MeshStandardMaterial({color:'#ced4ca',metalness:.55,roughness:.45,side:THREE.DoubleSide}),720),dummy=new THREE.Object3D();let n=0;
+        for(let row=1;row<=15;row++)for(let col=0;col<48;col++){
+          const phi=row/16*Math.PI/2,a=col/48*Math.PI*2+(row%2)*.065;
           dummy.position.set(x+28*Math.sin(phi)*Math.cos(a),8+24*Math.cos(phi),37*Math.sin(phi)*Math.sin(a));
-          const normal=new THREE.Vector3(Math.sin(phi)*Math.cos(a),Math.cos(phi),Math.sin(phi)*Math.sin(a)).normalize();dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);dummy.updateMatrix();spikes.setMatrixAt(n++,dummy.matrix);
+          const normal=new THREE.Vector3(Math.sin(phi)*Math.cos(a)/28,Math.cos(phi)/24,Math.sin(phi)*Math.sin(a)/37).normalize();
+          dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);dummy.scale.setScalar(.65+Math.sin(phi)*.55);dummy.updateMatrix();fins.setMatrixAt(n++,dummy.matrix);
         }
-        group.add(spikes);
+        group.add(fins);
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.012,4,80),steel);ring.rotation.x=Math.PI/2;ring.scale.set(28,37,28);ring.position.set(x,8,0);group.add(ring);
+        for(let a=0;a<Math.PI*2;a+=Math.PI/20)box(group,x+27*Math.cos(a),5,36*Math.sin(a),.5,7,.5,steel);
+
       }
     }else if(l.id==='fullerton') {
       box(group,0,17,0,94,34,48,ivory);box(group,0,35,0,97,2,50,stone);
@@ -57,5 +63,5 @@ export function addLandmarks(scene,glass,stone) {
     }
     group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   }
-  return made;
+  return {groups:made,ready:Promise.all(pending)};
 }

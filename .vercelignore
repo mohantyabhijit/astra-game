@@ -1,0 +1,7 @@
+artifacts/
+test-results/
+playwright-report/
+docs/
+tests/
+marina.md
+.github/

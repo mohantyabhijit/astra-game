@@ -1,169 +1,522 @@
-import './style.css';
-import { createWorld } from './world.js';
-import { GameAudio } from './audio.js';
-import { createGame, startGame, stepGame, togglePause, recoverCar, triggerPursuit, COOLDOWN_SECONDS, distance, angleDelta, clamp } from './simulation.js';
-import { roads, garages, gems, WATER, WORLD_BOUNDS, CIRCUIT_LENGTH } from './district.js';
-
-const $ = id => document.getElementById(id);
-const show = (id, visible) => $(id).classList.toggle('hidden', !visible);
-let savedGems=[];try{savedGems=JSON.parse(localStorage.getItem('marina-getaway-gems-v1')||'[]');if(!Array.isArray(savedGems))savedGems=[];}catch{}
-let game = createGame(savedGems), world, view = 0, helpWasRunning = false, mapOpen = false;
-const input = {}, audio = new GameAudio();
-let best = 0;
-try { best = Number(localStorage.getItem('midnight-run-best')) || 0; } catch { /* Storage may be disabled. */ }
-$('intro-best').textContent = String(Math.floor(best)).padStart(6, '0');
-$('best').textContent = Math.floor(best).toLocaleString();
-for (let i = 0; i < 24; i++) $('tachometer').appendChild(document.createElement('i'));
-const checkpointDots = [...$('checkpoint-dots').children], tachometer = [...$('tachometer').children];
-const keyMap = { KeyW: 'forward', ArrowUp: 'forward', KeyS: 'reverse', ArrowDown: 'reverse', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'handbrake', ShiftLeft: 'boost', ShiftRight: 'boost' };
-const heldKeys = new Set(), heldTouches = new Map();
-function updateInput() {
+import {DefaultLoadingManager} from "three";
+import "./style.css";
+import { createWorld } from "./world.js";
+import { GameAudio } from "./audio.js";
+import {
+  createGame,
+  startGame,
+  stepGame,
+  togglePause,
+  recoverCar,
+  triggerPursuit,
+  interact,
+  punch,
+  selectCharacter,
+  COOLDOWN_SECONDS,
+  clamp,
+  distance,
+} from "./simulation.js";
+import { roads, gems, WATER, MISSIONS, POLICE_STATION, WORLD_BOUNDS } from "./district.js";
+import { createCharacterPreview } from "./character-preview.js";
+const $ = (id) => document.getElementById(id),
+  show = (id, on) => $(id)?.classList.toggle("hidden", !on);
+let stored = [];
+try {
+  stored = JSON.parse(localStorage.getItem("marina-getaway-gems-v2") || "[]");
+} catch {}
+let game = createGame(Array.isArray(stored) ? stored : []),
+  world,
+  view = 0,
+  mapOpen = false,
+  helpWasRunning = false,
+  selected = "kai";
+const input = {},
+  held = new Set(),
+  audio = new GameAudio(),
+  keyMap = {
+    KeyW: "forward",
+    ArrowUp: "forward",
+    KeyS: "reverse",
+    ArrowDown: "reverse",
+    KeyA: "left",
+    ArrowLeft: "left",
+    KeyD: "right",
+    ArrowRight: "right",
+    Space: "handbrake",
+    ShiftLeft: "boost",
+    ShiftRight: "boost",
+  };
+let preview;
+let loadingFailed = false;
+const allAssets = new Promise((resolve,reject) => {
+  DefaultLoadingManager.onLoad = resolve;
+  DefaultLoadingManager.onError = url => reject(new Error(`Could not load ${url}`));
+});
+// Attach rejection handling immediately, before starting any asset requests.
+allAssets.catch(()=>{});
+function loadingError(err) {
+  loadingFailed = true;
+  console.error("Game loading failed",err);
+  $("loading-screen").style.display="none";
+  $("error-copy").textContent="The city could not finish loading. Reload to try again.";
+  show("error",true);
+}
+try {
+  preview=createCharacterPreview($("character-preview"));
+  preview.select(selected);
+  $("start").disabled=true;
+  preview.ready.catch(loadingError);
+} catch(err) {loadingError(err);}
+function syncInput() {
   for (const k of Object.keys(input)) input[k] = false;
-  for (const code of heldKeys) if (keyMap[code]) input[keyMap[code]] = true;
-  for (const control of heldTouches.values()) input[control] = true;
+  for (const code of held) if (keyMap[code]) input[keyMap[code]] = true;
 }
-function releaseControls() { heldKeys.clear(); heldTouches.clear(); updateInput(); }
+function choose(id) {
+  selected = id;
+  selectCharacter(game, id);
+  preview?.select(id);
+  for (const b of document.querySelectorAll(".agent")) {
+    const on = b.dataset.character === id;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on);
+  }
+  $("agent-name").textContent = id === "kai" ? "KAI" : "RAE";
+  $("agent-role").textContent = id === "kai" ? "THE SPARK" : "THE ACE";
+  $("stage-number").textContent = id === "kai" ? "01" : "02";
+}
+document
+  .querySelectorAll(".agent")
+  .forEach((b) =>
+    b.addEventListener("click", () => choose(b.dataset.character)),
+  );
 function start() {
-  if (!$('controls').classList.contains('hidden')) return;
-  audio.init(); startGame(game); world?.resetCamera(); updateStatus();
-}
-function pause() {
-  togglePause(game); releaseControls(); updateStatus();
+  if ($("start").disabled || !$("controls").classList.contains("hidden"))
+    return;
+  held.clear();
+
+  syncInput();
+  audio.init();
+  world?.shotAudio.unlock();
+  selectCharacter(game, selected);
+  startGame(game);
+  game.status="intro";game.introElapsed=0;
+  world?.resetCamera?.();
+  status();
 }
 function restart() {
-  const kept=game.status==='won'?[]:game.collected;
-  game = createGame(kept);try{localStorage.setItem('marina-getaway-gems-v1',JSON.stringify(kept));}catch{} releaseControls(); startGame(game); audio.init(); world?.resetCamera(); updateStatus();
+  const kept = game.status === "won" ? [] : [...game.collected];
+  held.clear();
+
+  syncInput();
+  game = createGame(kept);
+  choose(selected);
+  start();
 }
-function updateStatus() {
-  const ready = game.status === 'ready', ended = game.status === 'won' || game.status === 'lost', paused = game.status === 'paused';
-  document.body.classList.toggle('playing', !ready);
-  show('intro', ready); show('briefing', ready); show('footer', ready); show('hud', !ready);
-  show('pause', !ready && !ended); show('touch-controls', !ready && !ended && !paused);
-  show('result', ended || paused); show('resume', paused); show('result-stats', ended);
-  $('result-eyebrow').textContent = paused ? 'TAKE A BREATHER' : game.status === 'won' ? 'ALL GEMS COLLECTED' : 'END OF THE ROAD';
-  $('result-title').textContent = paused ? 'PAUSED.' : game.status === 'won' ? 'BAY COMPLETE.' : 'RUN OVER.';
-  $('result-copy').textContent = paused ? 'The city can wait. Catch your breath, then make your move.' : game.outcome;
-  $('pause').setAttribute('aria-label', paused ? 'Resume game' : 'Pause game'); $('pause').textContent = paused ? '▷' : 'Ⅱ';
-  if (ended) {
-    $('result-stats').innerHTML = `<div>FINAL SCORE<strong>${Math.floor(game.score).toLocaleString()}</strong></div><div>GEMS<strong>${game.collected.length} / 24</strong></div><div>CLOSE CALLS<strong>${game.nearMisses}</strong></div>`;
-    if (game.score > best) {
-      best = Math.floor(game.score); try { localStorage.setItem('midnight-run-best', String(best)); } catch { /* No persistence is fine. */ }
-      $('best').textContent = best.toLocaleString();
-    }
-    releaseControls(); $('restart').focus();
+function status() {
+  const ready = game.status === "ready",
+    paused = game.status === "paused",
+    ended = ["won", "lost"].includes(game.status);
+  document.body.classList.toggle("playing", !ready);
+  document.body.classList.toggle("cinematic",game.status === "intro");
+  show("intro", ready);
+  show("footer", ready);
+  show("hud", !ready && game.status !== "intro");
+  show("pause", !ready && !ended && game.status !== "intro");
+  show("result", paused || ended);
+  show("resume", paused);
+  $("result-title").textContent = paused
+    ? "PAUSED."
+    : game.status === "won"
+      ? "MISSION COMPLETE."
+      : "RUN OVER.";
+  $("result-copy").textContent = paused
+    ? "Marina Bay will wait."
+    : game.outcome || "Back to the plaza.";
+}
+function pause() {
+  if (game.status === "running" || game.status === "paused") {
+    togglePause(game);
+    held.clear();
+
+    syncInput();
+    status();
   }
 }
 function openHelp() {
-  helpWasRunning = game.status === 'running';
-  if (helpWasRunning) { togglePause(game); releaseControls(); updateStatus(); }
-  show('controls', true); $('close-help').focus();
+  helpWasRunning = game.status === "running";
+  if (helpWasRunning) pause();
+  show("controls", true);
 }
 function closeHelp() {
-  show('controls', false);
-  if (helpWasRunning && game.status === 'paused') togglePause(game);
-  helpWasRunning = false; updateStatus(); $('help').focus();
+  show("controls", false);
+  if (helpWasRunning && game.status === "paused") pause();
+  helpWasRunning = false;
 }
-function toggleSound() { audio.toggle(); $('sound-label').textContent = audio.muted ? 'OFF' : 'ON'; $('sound').setAttribute('aria-label', audio.muted ? 'Unmute sound' : 'Mute sound'); }
-$('map-toggle').addEventListener('click',()=>{mapOpen=!mapOpen;document.body.classList.toggle('map-open',mapOpen);});
-$('start').addEventListener('click', start); $('pause').addEventListener('click', pause);
-$('resume').addEventListener('click', pause); $('restart').addEventListener('click', restart);
-$('help').addEventListener('click', openHelp); $('close-help').addEventListener('click', closeHelp); $('sound').addEventListener('click', toggleSound);
-addEventListener('keydown', e => {
-  if (keyMap[e.code]) e.preventDefault();
+function sound() {
+  audio.toggle();
+  $("sound-label").textContent = audio.muted ? "OFF" : "ON";
+}
+$("start").addEventListener("click", start);
+$("pause").addEventListener("click", pause);
+$("resume").addEventListener("click", pause);
+$("restart").addEventListener("click", restart);
+$("help").addEventListener("click", openHelp);
+$("close-help").addEventListener("click", closeHelp);
+$("sound").addEventListener("click", sound);
+$("interact").addEventListener("click", () => interact(game));
+function toggleMap() {
+  mapOpen = !mapOpen;
+  document.body.classList.toggle("map-open", mapOpen);
+}
+$("map-toggle").addEventListener("click", toggleMap);
+addEventListener("keydown", (e) => {
+  if(game.status === "intro") {if(keyMap[e.code])e.preventDefault();return;}
+  if (keyMap[e.code]) {
+    e.preventDefault();
+    held.add(e.code);
+    syncInput();
+  }
   if (e.repeat) return;
-  if (!$('controls').classList.contains('hidden')) { if (e.code === 'Escape') closeHelp(); return; }
-  if (keyMap[e.code]) { heldKeys.add(e.code); updateInput(); }
-  if (e.code === 'Enter') {
-    // Native focused buttons already handle Enter. Avoid two actions from one key press.
-    if (document.activeElement?.tagName !== 'BUTTON') { if (game.status === 'ready') start(); else if (game.status === 'won' || game.status === 'lost') restart(); }
+  if (!$("controls").classList.contains("hidden")) {
+    if (e.code === "Escape") closeHelp();
+    return;
   }
-  if (e.code === 'Escape' || e.code === 'KeyP') pause();
-  if (e.code === 'KeyR') recoverCar(game);
-  if (e.code === 'KeyC') view = (view + 1) % 2;
-  if (e.code === 'KeyM') {mapOpen=!mapOpen;document.body.classList.toggle('map-open',mapOpen);}
-  if (e.code === 'KeyH') triggerPursuit(game);
-  if (e.code === 'KeyN') toggleSound();
+  if (e.code === "ArrowLeft" && game.status === "ready") choose("kai");
+  if (e.code === "ArrowRight" && game.status === "ready") choose("rae");
+  if (
+    e.code === "Enter" &&
+    game.status === "ready" &&
+    document.activeElement?.tagName !== "BUTTON"
+  )
+    start();
+  if (e.code === "KeyF") {e.preventDefault();punch(game);}
+  if (e.code === "KeyE") interact(game);
+  if (e.code === "Escape" || e.code === "KeyP") pause();
+  if (e.code === "KeyR") recoverCar(game);
+  if (e.code === "KeyC") view = (view + 1) % 2;
+  if (e.code === "KeyM") toggleMap();
+  if (e.code === "KeyH") triggerPursuit(game);
+  if (e.code === "KeyN") sound();
 });
-addEventListener('keyup', e => { heldKeys.delete(e.code); updateInput(); });
-addEventListener('blur', () => { releaseControls(); if (game.status === 'running') pause(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseControls(); if (game.status === 'running') pause(); } });
-for (const button of document.querySelectorAll('[data-input]')) {
-  button.addEventListener('pointerdown', e => { e.preventDefault(); button.setPointerCapture(e.pointerId); heldTouches.set(e.pointerId, button.dataset.input); updateInput(); });
-  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, e => { heldTouches.delete(e.pointerId); updateInput(); });
-}
-// Keep keyboard focus within whichever modal is open.
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Tab') return;
-  const modal = !$('controls').classList.contains('hidden') ? $('controls') : !$('result').classList.contains('hidden') ? $('result') : null;
-  if (!modal) return;
-  const items = [...modal.querySelectorAll('button,a')].filter(el => !el.classList.contains('hidden'));
-  const first = items[0], last = items.at(-1);
-  if (e.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+addEventListener("keyup", (e) => {
+  held.delete(e.code);
+  syncInput();
 });
+addEventListener("blur", () => {
+  held.clear();
+  syncInput();
+  if (game.status === "running") pause();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    held.clear();
 
-const map = $('minimap').getContext('2d');
-function drawMap() {
-  const width=420,height=420,p=game.player;
-  const range=mapOpen?1900:570, scale=width/range;
-  const centre=mapOpen?{x:-730,z:180}:p;
-  const point=q=>({x:width/2+(q.x-centre.x)*scale,y:height/2+(q.z-centre.z)*scale});
-  map.clearRect(0,0,width,height);map.fillStyle='#e4eadc';map.fillRect(0,0,width,height);
-  map.beginPath();WATER.forEach((q,i)=>{const v=point(q);i?map.lineTo(v.x,v.y):map.moveTo(v.x,v.y);});map.closePath();map.fillStyle='#8bc6d0';map.fill();
-  for(const road of roads){map.lineWidth=Math.max(mapOpen?2:4,road.width*scale);map.strokeStyle='#99a5a0';map.beginPath();road.points.forEach((q,i)=>{const v=point(q);i?map.lineTo(v.x,v.y):map.moveTo(v.x,v.y);});if(road.closed)map.closePath();map.stroke();}
-  if(game.guidance?.points.length){map.lineWidth=mapOpen?3:5;map.strokeStyle=game.phase==='free'?'#8252c7':'#c47c11';map.beginPath();game.guidance.points.forEach((q,i)=>{const v=point(q);i?map.lineTo(v.x,v.y):map.moveTo(v.x,v.y);});map.stroke();}
-  for(const gem of gems){if(game.collected.includes(gem.id))continue;const q=point(gem);map.fillStyle='#7749b4';map.save();map.translate(q.x,q.y);map.rotate(Math.PI/4);map.fillRect(-3,-3,6,6);map.restore();}
-  for(const garage of garages){const q=point(garage.entrance);map.fillStyle='#c4811f';map.fillRect(q.x-5,q.y-5,10,10);if(mapOpen){map.fillStyle='#39565b';map.font='10px sans-serif';map.fillText(garage.name.split(' ')[0],q.x+8,q.y+3);}}
-  for(const c of game.police){if(!c.visible)continue;const q=point(c);map.fillStyle='#d64c4c';map.beginPath();map.arc(q.x,q.y,5,0,Math.PI*2);map.fill();}
-  const dest=game.guidance?.destination;if(dest){const raw=point(dest.entrance||dest),q={x:clamp(raw.x,12,width-12),y:clamp(raw.y,12,height-12)};map.strokeStyle=game.phase==='free'?'#7940bc':'#b67516';map.lineWidth=2;map.beginPath();map.arc(q.x,q.y,10,0,Math.PI*2);map.stroke();}
-  const q=point(p);map.save();map.translate(q.x,q.y);map.rotate(p.heading);map.fillStyle='#173b47';map.strokeStyle='#fff';map.lineWidth=2;map.beginPath();map.moveTo(0,-11);map.lineTo(7,8);map.lineTo(0,5);map.lineTo(-7,8);map.closePath();map.fill();map.stroke();map.restore();
-}
-let toastUntil=0;
-function updateHud(now) {
-  $('score').textContent=String(Math.floor(game.score)).padStart(6,'0');
-  const seconds=Math.floor(game.elapsed);$('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
-  $('progress').textContent=`${game.collected.length} / ${gems.length}`;
-  checkpointDots.forEach((el,i)=>el.className=i<game.collected.length%3?'done':'');
-  $('objective').textContent=game.phase==='free'?`${3-game.gemsSinceChase} gems until the next chase`:game.phase==='cooldown'?`Cooling down · ${game.escape.toFixed(1)} / ${COOLDOWN_SECONDS}s`:'Gem collection paused during pursuit';
-  const guidance=game.guidance,dest=guidance?.destination;
-  $('destination-name').textContent=dest?dest.name.toUpperCase():game.collected.length===gems.length?'COLLECTION COMPLETE':'FIND AN ACCESS ROAD';
-  $('destination-distance').textContent=dest?`${Math.round(guidance.distance)} m by road`:'';
-  $('turn-cue').textContent=game.phase==='cooldown'?'Stay parked. Keep out of police sight.':guidance?.cue||'Follow the road';
-  $('turn-distance').textContent=guidance?.turnDistance>25?`in ${Math.round(guidance.turnDistance)} m`:'';
-  $('direction').textContent=game.phase==='cooldown'?'P':guidance?.turn==='left'?'↰':guidance?.turn==='right'?'↱':guidance?.turn==='arrive'?'◇':'↑';
-  $('direction').style.transform='none';
-  document.body.dataset.phase=game.phase;
-  const kph=Math.round(Math.hypot(game.player.vx,game.player.vz)*3.6);$('speed').textContent=kph;$('gear').textContent=game.player.speed<-1?'R':kph<3?'N':String(Math.min(6,Math.floor(kph/32)+1));
-  tachometer.forEach((el,i)=>el.classList.toggle('on',i<kph/184*24));
-  $('boost-bar').style.width=`${game.boost}%`;$('boost-number').textContent=`${Math.round(game.boost)}%`;
-  $('health-bar').style.width=`${game.health}%`;$('health-number').textContent=`${Math.ceil(game.health)}%`;$('health-bar').parentElement.classList.toggle('danger',game.health<30);
-  $('pursuit-label').textContent=game.phase==='free'?'FREE ROAM · COLLECT GEMS':game.phase==='cooldown'?`COOLDOWN · ${Math.max(0,COOLDOWN_SECONDS-game.escape).toFixed(1)}s`:game.seen?'POLICE HAVE VISUAL':'SIGHT BROKEN · FIND COVER';
-  $('pursuit').classList.toggle('clear',game.phase==='free');$('heat').textContent=game.phase==='free'?'◇ ◇ ◇':game.seen?'★ ★ ★':'★ ☆ ☆';
-  $('cooldown-panel').classList.toggle('hidden',game.phase==='free');$('cooldown-fill').style.width=`${game.escape/COOLDOWN_SECONDS*100}%`;
-  $('cooldown-state').textContent=game.phase==='cooldown'?'HOLD POSITION':game.seen?'BREAK LINE OF SIGHT':'ENTER COVER & PARK';
-  $('lap-progress').textContent=`LAP ${game.laps+1} · ${Math.round(game.lapProgress*100)}%`;
-  while(game.events.length){const e=game.events.shift();$('toast').textContent=e.text;$('toast').className=`${e.kind} visible`;toastUntil=now+3000;
-    if(['gem','reward','escape'].includes(e.kind))audio.chime();
-    if(e.kind==='gem')try{localStorage.setItem('marina-getaway-gems-v1',JSON.stringify(game.collected));}catch{}
+    syncInput();
+    if (game.status === "running") pause();
   }
-  if(now>toastUntil)$('toast').classList.remove('visible');drawMap();
+});
+const ctx = $("minimap").getContext("2d");
+function drawMap() {
+  const w = 420,
+    h = 420,
+    p = game.player,
+    range = mapOpen ? 1940 : 620,
+    scale = w / range,
+    centre = mapOpen ? { x:(WORLD_BOUNDS.minX+WORLD_BOUNDS.maxX)/2, z:(WORLD_BOUNDS.minZ+WORLD_BOUNDS.maxZ)/2 } : p,
+    pt = (q) => ({
+      x: w / 2 + (q.x - centre.x) * scale,
+      y: h / 2 + (q.z - centre.z) * scale,
+    });
+  ctx.fillStyle = "#dce9df";
+  ctx.fillRect(0, 0, w, h);
+  ctx.beginPath();
+  WATER.forEach((q, i) => {
+    q = pt(q);
+    i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "#76bed0";
+  ctx.fill();
+  for (const r of roads) {
+    ctx.beginPath();
+    ctx.lineWidth = Math.max(mapOpen ? 2 : 4, r.width * scale);
+    ctx.strokeStyle = "#8d9d98";
+    r.points.forEach((q, i) => {
+      q = pt(q);
+      i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y);
+    });
+    if (r.closed) ctx.closePath();
+    ctx.stroke();
+  }
+  if (game.guidance?.points && (game.phase !== "free" || game.mission === "active")) {
+    ctx.beginPath();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = game.guidance.kind === "cooldown" ? "#f3a341" : "#9b57cc";
+    game.guidance.points.forEach((q, i) => {
+      q = pt(q);
+      i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y);
+    });
+    ctx.stroke();
+  }
+  const permanentMarks = [];
+  const marker = (q, label, color, diamond = false, edgeClamp = true) => {
+    const raw = pt(q);
+    if (
+      !edgeClamp &&
+      (raw.x < 10 || raw.x > w - 10 || raw.y < 10 || raw.y > h - 10)
+    )
+      return;
+    const x = edgeClamp ? clamp(raw.x, 15, w - 15) : raw.x;
+    let y = edgeClamp ? clamp(raw.y, 15, h - 15) : raw.y;
+    if (label === "M" || label === "P") {
+      for (const previous of permanentMarks) {
+        if (Math.abs(x - previous.x) < 24 && Math.abs(y - previous.y) < 24)
+          y = previous.y < h / 2 ? previous.y + 27 : previous.y - 27;
+      }
+      permanentMarks.push({ x, y });
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    if (diamond) ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = color;
+    ctx.fillRect(-10, -10, 20, 20);
+    if (diamond) ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = "#102a32";
+    ctx.font = "bold 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, 0, 1);
+    ctx.restore();
+  };
+  if (game.guidance?.kind === "cooldown")
+    marker(
+      game.guidance.destination.inside || game.guidance.destination,
+      "◇",
+      "#63f1e2",
+      true,
+    );
+  if (game.mission === "active")
+    for (const gem of gems)
+      if (!game.collected.includes(gem.id))
+        marker(gem, "", "#9b57cc", true, false);
+  for (const c of game.police || [])
+    if (c.visible) {
+      const q = pt(c);
+      ctx.fillStyle = "#e94d50";
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  // Permanent landmarks render last and remain edge-clamped, so M and P are
+  // always legible even when the player is across the district.
+  marker(MISSIONS[0], "M", "#ffb15c");
+  marker(POLICE_STATION, "P", "#ff6e67");
+  const q = pt(p);
+  ctx.save();
+  ctx.translate(q.x, q.y);
+  ctx.rotate(p.heading);
+  ctx.fillStyle = "#123844";
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(8, 9);
+  ctx.lineTo(0, 5);
+  ctx.lineTo(-8, 9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
-try { world = createWorld($('game')); } catch (err) { console.error(err); show('error', true); }
-$('game').addEventListener('webglcontextlost', e => { e.preventDefault(); if (game.status === 'running') pause(); $('error-copy').textContent = 'The graphics connection was interrupted. Reload to restart the engine.'; show('error', true); });
-let previous = performance.now(), accumulator = 0, lastHud = 0;
+let toastUntil = 0;
+function hud(now) {
+  document.body.dataset.mode = game.mode;
+  const mission = game.mission,
+    hits = game.policeHits || 0,
+    driving = game.mode === "driving",
+    transition = game.transition,
+    near = game.vehicles
+      ?.filter((v) => !v.destroyed)
+      ?.map((v) => ({ v, d: distance(game.player, v) }))
+      .sort((a, b) => a.d - b.d)[0];
+  $("mission-label").textContent =
+    mission === "available"
+      ? "FREE ROAM"
+      : mission === "active"
+        ? "MARINA GEM RUN"
+        : "MISSION COMPLETE";
+  $("objective").textContent =
+    mission === "available"
+      ? "Explore Marina Bay"
+      : mission === "active"
+        ? `Collect gems · ${game.collected.length} / ${gems.length}`
+        : "Marina Bay is yours";
+  $("progress").textContent =
+    mission === "active"
+      ? `${gems.length - game.collected.length} GEMS REMAIN`
+      : mission === "available"
+        ? "OPTIONAL MISSION · FIND M"
+        : "EXPLORE FREELY";
+  const gd = game.guidance,
+    d = gd?.destination;
+  const directionVisible = mission === "active" || game.phase !== "free";
+  document.querySelector(".destination").classList.toggle(
+    "hidden",
+    !directionVisible,
+  );
+  $("destination-name").textContent =
+    game.phase === "cooldown"
+      ? "HIDE FOR 5 SECONDS"
+      : d?.name?.toUpperCase() || "MISSION ROUTE";
+  $("destination-distance").textContent =
+    game.phase === "cooldown"
+      ? "Sight or movement resets the timer"
+      : gd && isFinite(gd.distance)
+        ? `${Math.round(gd.distance)} m by road`
+        : "";
+  $("turn-cue").textContent =
+    game.phase === "cooldown"
+      ? "Stay still · remain unseen"
+      : gd?.cue || "Follow the route";
+  $("direction").textContent =
+    gd?.turn === "left"
+      ? "↰"
+      : gd?.turn === "right"
+        ? "↱"
+        : gd?.kind === "cooldown"
+          ? "◇"
+          : gd?.turn === "arrive"
+            ? "◆"
+            : "↑";
+  $("pursuit").classList.toggle("clear", game.phase === "free");
+  $("pursuit-label").textContent =
+    game.phase === "free"
+      ? "CITY CLEAR"
+      : game.pursuitDelay > 0
+        ? `POLICE RESPOND IN ${Math.ceil(game.pursuitDelay)}s`
+      : game.phase === "cooldown"
+        ? "COOLING DOWN"
+        : game.seen
+          ? "POLICE HAVE VISUAL"
+          : "REACH COOLDOWN";
+  [...$("impact-pips").children].forEach((x, i) =>
+    x.classList.toggle("hit", i < hits),
+  );
+  $("heat").textContent = `${hits} / 3 HITS`;
+  $("hits-text").textContent = [0, 1, 2]
+    .map((i) => (i < hits ? "●" : "○"))
+    .join(" ");
+  $("cooldown-panel").classList.toggle("hidden", game.phase === "free");
+  const cooldownRemaining = Math.max(
+    0,
+    COOLDOWN_SECONDS - (game.escape || 0),
+  );
+  $("cooldown-count").textContent = cooldownRemaining.toFixed(1);
+  $("cooldown-count").classList.toggle(
+    "waiting",
+    game.phase !== "cooldown",
+  );
+  $("cooldown-fill").style.width =
+    `${Math.min(100, ((game.escape || 0) / COOLDOWN_SECONDS) * 100)}%`;
+  $("cooldown-state").textContent =
+    game.phase === "cooldown"
+      ? "STAY STILL + UNSEEN · MOVEMENT OR SIGHT RESETS"
+      : "REACH ◇ · THEN HIDE STILL FOR 5 SECONDS";
+  const kph = driving
+    ? Math.round(Math.hypot(game.player.vx || 0, game.player.vz || 0) * 3.6)
+    : 0;
+  $("speed").textContent = kph;
+  $("mode-label").textContent =
+    game.mode === "foot"
+      ? "ON FOOT"
+      : game.mode === "driving"
+        ? "DRIVING"
+        : game.mode === "exploding"
+          ? "WOBBLEHEAD WIPEOUT"
+          : game.mode.toUpperCase();
+  const interactable = game.mode === "foot" && near?.d < 7;
+  $("interaction-copy").textContent = transition
+    ? transition.phase === "approach" ? "Walking to the driver’s door" : transition.phase === "align" ? "Turning toward the handle" : `${game.mode === "boarding" ? "Getting in" : "Getting out"} · ${Math.round(transition.progress * 100)}%`
+    : interactable
+      ? `Enter ${near.v.name}`
+      : driving
+        ? "Exit vehicle"
+        : "Walk closer to a vehicle";
+  show("interact", interactable || driving);
+  while (game.events?.length) {
+    const e = game.events.shift();
+    $("toast").textContent = e.text;
+    $("toast").className = `${e.kind || ""} visible`;
+    toastUntil = now + 2800;
+    if (["gem", "reward", "escape"].includes(e.kind)) audio.chime();
+    if (e.kind === "gem")
+      try {
+        localStorage.setItem(
+          "marina-getaway-gems-v2",
+          JSON.stringify(game.collected),
+        );
+      } catch {}
+  }
+  if (now > toastUntil) $("toast").classList.remove("visible");
+  drawMap();
+}
+try {
+  world = createWorld($("game"));
+  Promise.all([world.prepare(game),preview?.ready,allAssets,document.fonts.ready])
+    .then(async()=>{
+      if(loadingFailed)return;
+      $("loading-label").textContent="Ready to explore";
+      // Let both canvases present their complete scene before removing the cover.
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      $("loading-screen").style.display="none";
+      $("start").disabled=false;
+      $("start").firstChild.textContent="EXPLORE THE BAY ";
+    }).catch(loadingError);
+} catch (err) {
+  loadingError(err);
+}
+let previous = performance.now(),
+  acc = 0,
+  lastHud = 0;
 function frame(now) {
-  const delta = clamp((now - previous) / 1000, 0, .1); previous = now;
-  accumulator += delta;
-  const status = game.status;
-  while (accumulator >= 1 / 120) { stepGame(game, input, 1 / 120); accumulator -= 1 / 120; }
-  if (status !== game.status) updateStatus();
-  world?.update(game, delta, now / 1000, view);
-  if (now - lastHud > 65) { updateHud(now); audio.update(game); lastHud = now; }
+  const dt = clamp((now - previous) / 1000, 0, 0.1);
+  previous = now;
+  if(game.status === "intro" && !document.hidden) {
+    game.introElapsed=Math.min(6.5,game.introElapsed+dt);
+    if(game.introElapsed>=6.5){game.status="running";held.clear();syncInput();status();}
+  }
+  if (game.status === "ready") preview?.update(dt, now / 1000);
+  acc += dt;
+  const before = game.status;
+  while (acc >= 1 / 120) {
+    stepGame(game, input, 1 / 120);
+    acc -= 1 / 120;
+  }
+  if (before !== game.status) status();
+  if(world)world.shotAudio.enabled=!audio.muted;
+  world?.update(game, dt, now / 1000, view);
+  if (now - lastHud > 60) {
+    hud(now);
+    audio.update(game);
+    lastHud = now;
+  }
   requestAnimationFrame(frame);
 }
-updateStatus(); requestAnimationFrame(frame);
-// Development-only access for deterministic scenario setup in browser regression tests.
-if (import.meta.env.DEV) window.__gameTest = {
-  get state() { return game; }, get world() { return world; }, restart,
-  setState(values) { Object.assign(game, values); updateStatus(); },
-};
+status();
+requestAnimationFrame(frame);
+if (import.meta.env.DEV)
+  window.__gameTest = {
+    get state() {
+      return game;
+    },
+    get world() {
+      return world;
+    },
+    restart,
+    interact: () => interact(game),
+    selectCharacter: (id) => choose(id),
+    setState(v) {
+      Object.assign(game, v);
+      status();
+    },
+  };

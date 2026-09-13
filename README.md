@@ -1,78 +1,114 @@
 # Marina Getaway
 
-A local Three.js driving game built on Midnight Run's arcade handling. Explore a daytime Singapore district around the **2026 Marina Bay Street Circuit: 19 turns, 4.927 km**. Collect gems, escape police in sheltered courtyards, and keep exploring. You start in the car; vehicle theft is deferred.
+A desktop-only, single-player 3D game set around Singapore’s Marina Bay. Choose a wobblehead character, explore the waterfront, get into cars, collect gems and escape the police.
+
+Built with Three.js and Vite, combining the `astra-game` city and simulation with the characters, vehicles, animation and landmark assets from [Wobble Heads](https://github.com/ss-pratapIIITB/wobble-heads). Runs in the browser without a backend, API keys or runtime asset CDN.
+
+![Marina Getaway with rear-view mirror](artifacts/rear-view-mirror.png)
+
+## Play
+
+Use a desktop or laptop with a keyboard and a WebGL 2 browser. Phones and tablets display a desktop-required message and do not load the game assets.
+
+1. Choose **Kai** or **Rae** from the animated character selection.
+2. Watch the camera circle the Merlion and settle behind your character.
+3. Explore on foot or press **E** near a usable car. Your character walks around it, opens the driver’s door and gets in.
+4. Visit **M** when you want to begin the optional 24-gem driving mission.
+5. Hitting civilians or walking officers alerts the police. Follow the route to cover and stay parked and unseen for **5 seconds** to clear the pursuit.
+
+Free exploration starts immediately; the gem mission is optional. Collected gems survive pursuits and respawns, and exploration continues after mission completion.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| W / S or ↑ / ↓ | Walk forward/backward; accelerate/brake/reverse in a car |
+| A / D or ← / → | Turn or steer |
+| Shift | Run on foot; boost while driving |
+| E | Enter a nearby usable car; exit after slowing down |
+| F | Punch on foot |
+| Space | Handbrake |
+| C | Switch camera |
+| M | Expand/collapse the map |
+| R | Recover the car to a safe road position |
+| Esc / P | Pause/resume |
+| N | Mute/unmute |
+
+## Current game scope
+
+- **Downtown Marina Bay:** a bounded 1.83 × 1.57 km district with connected roads, bridges and Bayfront Drive. The road network uses a game-scale interpretation of the 2026 Marina Bay circuit.
+- **Landmarks:** imported Merlion and Marina Bay Sands, plus Esplanade, Fullerton and Singapore Flyer. Architectural geometry is a game interpretation, not a surveyed replica; building interiors are not playable.
+- **Characters and city life:** two selectable characters, civilian pedestrians with persistent identities and varied clothing, walking police patrols and ambient traffic.
+- **Vehicles:** 15 usable Jeeps, Minis and sports cars, articulated doors and natural boarding. Driving includes speed-sensitive steering, braking, reverse, handbrake and boost, with a 150 km/h cap.
+- **Chases:** marked police sports cars with flashing lights and sirens. Police track you outside cooldown areas; five uninterrupted seconds parked and unseen inside cover clear the heat.
+- **Consequences:** vehicle impacts knock people down with blood and recovery animations. Officers can shoot and engage at close range. Three distinct police-car impacts lead to an encounter, explosion, flying wobblehead and respawn near Merlion; fatal gunfire also causes respawn.
+- **One optional mission:** board the designated mission sports car and follow directions through 24 gems.
+- **HUD and cameras:** persistent minimap with **M** for the mission and **P** for the police station, route guidance, heat and impact status, cooldown countdown, close chase camera and a live rear-view mirror on the right.
+- **Environment:** four imported tree packs with 20 variants, instanced planting and animated wind. A loading cover keeps scene assembly hidden.
+
+This is a playable browser prototype. Multiplayer, a larger mission campaign, interiors, an economy and player-controlled shooting are outside the current scope. Physics and police behavior are arcade approximations.
 
 ## Run locally
+
+Requires Node.js 22.12 or newer.
 
 ```sh
 npm ci
 npm run dev -- --port 5187 --strictPort
 ```
 
-Open http://localhost:5187/. Requires Node 22.12+ and a WebGL 2 browser. All fonts, textures and game code are local; no API keys or backend are required. Source is maintained in the GitHub repository; use the local commands above for development.
+Open [localhost:5187](http://localhost:5187/).
 
-## Play
+```sh
+npm run build
+npm run preview
+```
 
-| Key | Action |
-| --- | --- |
-| W / Up | Accelerate |
-| S / Down | Brake, then reverse |
-| A / D or Left / Right | Steer |
-| Space | Handbrake |
-| Shift | Nitro |
-| C | Follow-camera height |
-| M | Expand/collapse map |
-| H | Start a police chase immediately |
-| R | Recover to road, costs 250 points |
-| Esc / P | Pause/resume |
-| N | Mute/unmute |
+The production build is written to `dist/`.
 
-Touch devices have driving buttons. Collected gems save in browser storage. Losing or restarting preserves them; restarting after winning begins a fresh collection.
-
-Purple guidance follows roads to the nearest reachable uncollected gem. Each gem earns 500 points; every three trigger a pursuit and suspend collection. Amber guidance chooses the closest reachable cooldown courtyard **by road distance**. Enter through the P marker, park behind the opaque screen, and stay unseen for eight seconds. Moving, leaving the boundary, or being spotted resets cooldown. Clearing heat earns 1,500, restores 35 integrity, refills nitro, and resumes gem guidance. All 24 gems complete the hunt. Driving, close calls and circuit laps also earn points. Police pinning you for five seconds or losing all integrity ends the run.
-
-Roads, garage entrances, elevation, physical barriers, route ribbons and minimap paths share world data. Police follow roads toward the last position they saw; buildings and garage walls block sight. Public streets have left-hand traffic, including buses and taxis.
-
-## Verify
+## Verification
 
 ```sh
 npm test
-npm run test:route
-npm run test:gameplay
-PLAYWRIGHT_CHANNEL=chrome npm run test:browser
+npx playwright install chromium
+npm run test:browser
 npm run build
 ```
 
-Alternatively install Playwright Chromium and omit `PLAYWRIGHT_CHANNEL`. Tests use isolated browser profiles and port 5187, avoiding other local games.
+On macOS with Chrome installed, use `PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. Simulation tests cover boarding, driving, pursuit, cooldown, collisions, melee, officer gunfire, recovery and world boundaries. Browser tests cover assets, selection, desktop interactions, loading, cinematic introduction and the mobile-device gate.
 
-- Simulation tests cover route clearance/reachability, distance-based destinations, gems, pursuit, sight screens, successful/interrupted cooldown, collisions, handling, persistence validation and pause.
-- The lap test uses ordinary driving inputs, traffic and damage, with a completed-collection profile to isolate circuit drivability. No teleporting, recovery or health restoration.
-- The gameplay test starts fresh and drives through three gems, a real pursuit, garage cooldown and resumed collection. No mission-state edits, police removal or teleports.
-- Browser tests cover keyboard collection/chase/map/pause, mobile touch input, daylight rendering and cooldown UI. The separate scenic/cooldown UI test uses explicit scenario setup; it is not the input-only gameplay proof.
+Longer input-driven scenarios are available through `npm run test:route`, `npm run test:gameplay` and `npm run test:cooldown`. These are development playtests, separate from the core test suite. Browser fixtures sometimes position actors directly to reproduce interactions; passing them is not a claim that every possible chase or route has been tested.
 
-Current reports and screenshots are under `artifacts/daylight-*`. Earlier Midnight Run screenshots/reports remain historical artifacts.
+## Deployment
 
-## Source
+Vercel builds the project as a Vite application using `npm run build` and serves `dist/`; configuration is in `vercel.json`. No environment variables are required. GitHub Actions runs automated verification. Production publication is separate from local test results.
 
-- `src/physics.js`: original arcade driving and vehicle collision core.
-- `src/district.js`: road layout, bridge grades, landmarks, gems and garage/collider data.
-- `src/collision-world.js`: spatial obstacle queries and collision/sight checks.
-- `src/navigation.js`: road graph, shortest paths, stable destination selection and turn cues.
-- `src/simulation.js`: traffic, pedestrians, police, progression, cooldown and scoring.
-- `src/world.js`, `src/landmarks.js`, `src/vehicles.js`: daylight Three.js scene and cameras.
-- `src/main.js`, `src/style.css`, `index.html`: controls, local persistence and responsive HUD.
-- `src/audio.js`: synthesized engine, sirens and chimes.
+```sh
+vercel --prod
+```
 
-## Environment assets
+## Project layout
 
-The supplied Meshy tree, groundcover and road models are preserved in `assets/source/`, with optimized runtime versions in `public/assets/models/`. See [asset provenance and processing](assets/README.md). Trees and grass sway in anchored vertex-shader wind; nearby foliage is instanced and distance-culled. The road module forms courtyard aprons, while the circuit retains continuous curved asphalt with fine aggregate surface relief. Rebuild models with `node scripts/prepare-models.js`.
+| Path | Responsibility |
+| --- | --- |
+| `src/desktop.js`, `src/main.js`, `src/style.css` | Desktop gate, input, selection and HUD |
+| `src/simulation.js`, `src/physics.js`, `src/collision-world.js` | Game states, driving and collision simulation |
+| `src/boarding.js`, `src/melee.js`, `src/police-*.js` | Boarding, combat and officers |
+| `src/district.js`, `src/navigation.js` | Map, roads, world bounds and guidance |
+| `src/world.js`, `src/landmarks.js`, `src/city-details.js` | Scene, cameras and landmarks |
+| `src/environment-assets.js`, `src/rear-view.js` | Planting, wind and mirror rendering |
+| `src/wobble/` | Imported Wobbleheads modules and game adapters |
+| `public/assets/` | Local models, textures, metadata and source credits |
+| `tests/` | Simulation tests and browser/input-driven playtests |
 
-## References and scope
+## Asset credits and history
 
-See [reference notes](docs/REFERENCES.md) for official circuit verification, OSM attribution, user photographs and geographic approximations.
+Game code uses the repository’s MIT license. Third-party assets retain their own terms; the code license does not replace their licenses.
 
-Higgsfield generated the original asphalt and pearl-paint textures, retained in this edition. Original PNGs are in `art/originals/`; optimized textures and exact generation provenance are in `public/assets/`. The original night façade/reference assets are preserved but the daylight towers use a procedural façade. Models are source-generated geometry, not imported photogrammetry.
+- [Wobbleheads integration and character provenance](src/wobble/README.md).
+- [Merlion credits](public/assets/merlion/CREDITS.md): Singapore Merlion ReSculpt by cymon, based on keeganTeo’s model, CC BY 4.0.
+- [Marina Bay Sands credits](public/assets/marina-bay-sands/CREDITS.md): original Wobbleheads game geometry, imported from `94be054`.
+- [Tree credits](public/assets/environment/CREDITS.md): Quaternius packs under CC0, imported from `7864e62`.
+- [Original environment asset sources](assets/README.md), [asset provenance](public/assets/provenance.json) and [map references](docs/REFERENCES.md).
 
-The circuit is a recognizable game-scale interpretation, not a surveyed simulator. Auxiliary roads, courtyard layouts, bridge heights, lane widths and scenery are simplified. This is single-player arcade physics with simple pedestrian walking/vehicle avoidance, no suspension simulation, theft, multiplayer or accounts. Traffic uses lane-following and basic avoidance rather than traffic-light scheduling. Mobile browser emulation is covered; physical-phone performance has not been measured.
-
-The existing GitHub workflow can publish on a future push to main; pushes run verification and the configured Pages publication workflow.
+Historical files and screenshots in `artifacts/`, `docs/INTEGRATION-VERIFICATION.md` and `marina.md` may describe earlier versions. This README describes the current intended scope; fresh test output and the deployed build establish the current release state.

@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {resolvePoliceShot} from '../src/police-ballistics.js';import {atCircuit} from '../src/district.js';
+test('a bullet hits the first body in its path rather than passing through to the player',()=>{const p=atCircuit(100),cop={...p},civilian={x:p.x,y:0,z:p.z-2},player={x:p.x,y:0,z:p.z-4};const g={mode:'foot',player,pedestrians:[civilian],patrols:[],vehicles:[]};const result=resolvePoliceShot(g,cop,{origin:{x:p.x,y:1.1,z:p.z},end:{x:p.x,y:1.1,z:p.z-8}});assert.equal(result.contact.entity,civilian);});
+test('parked car cover intercepts a bullet before the body',()=>{const p=atCircuit(100),player={x:p.x,y:0,z:p.z-4};const g={mode:'foot',player,pedestrians:[],patrols:[],vehicles:[{x:p.x,z:p.z-2,heading:0,halfW:1,halfL:.5}]};const result=resolvePoliceShot(g,p,{origin:{x:p.x,y:1.1,z:p.z},end:{x:p.x,y:1.1,z:p.z-8}});assert.equal(result.contact,null);assert.ok(result.end.z>p.z-2);});

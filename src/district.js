@@ -1,6 +1,7 @@
 import source from '../data/circuit-source.json' with { type: 'json' };
 import { distance, seededRandom } from './physics.js';
 
+export const WORLD_BOUNDS={minX:-1620,maxX:210,minZ:-430,maxZ:1140};
 export const CIRCUIT_EDITION = '2026 · 19 turns · 4.927 km';
 export const CIRCUIT_SOURCE = source.source;
 export const originalCircuit = source.routePoints.map(([x, north], i) => ({ x, z: -north, y: 0, sourceIndex: i }));
@@ -70,6 +71,21 @@ roads.push({id:'raffles-access',name:'Raffles Avenue access',kind:'public',width
 const civicA=originalCircuit[101],civicB=originalCircuit[118];
 roads.push({id:'civic-streets',name:'Civic District service road',kind:'public',width:22,closed:false,points:resample([civicA,{x:-1300,z:-115,y:0},{x:-1535,z:95,y:0},{x:-1510,z:255,y:0},civicB],false)});
 roads.push({id:'pit-lane',name:'Pit lane',kind:'pit',width:12,closed:false,points:resample([originalCircuit[222],{x:43,z:100,y:0},{x:5,z:-170,y:0},originalCircuit[2]],false)});
+// A compact public loop leaves the circuit beside Fullerton and opens onto
+// Merlion Park. Its eastern edge stays just inside the modelled shoreline.
+roads.push({id:'merlion-access',name:'Merlion Park access',kind:'public',width:13,closed:false,points:resample([
+  originalCircuit[143],
+  {x:-1152,z:579,y:0},
+  {x:-1132,z:594,y:0},
+  {x:-1115,z:586,y:0},
+  {x:-1130,z:570,y:0},
+  originalCircuit[147],
+],false,6)});
+// Bayfront Drive connects the eastern public streets to the Sands waterfront.
+roads.push({id:'bayfront-drive',name:'Bayfront Drive',kind:'public',width:22,closed:false,points:resample([
+  {x:125,z:215,y:0},{x:170,z:440,y:0},{x:155,z:790,y:0},{x:60,z:1055,y:0},
+  {x:-610,z:1080,y:0},{x:-650,z:1030,y:0}
+],false,12)});
 export const connections=roads.filter(r=>r.id!=='circuit').flatMap(r=>[r.points[0],r.points.at(-1)]);
 
 export const WATER = [
@@ -80,12 +96,55 @@ export const WATER = [
 ];
 export function inWater(p) { let inside=false;for(let i=0,j=WATER.length-1;i<WATER.length;j=i++) {const a=WATER[i],b=WATER[j];if((a.z>p.z)!==(b.z>p.z)&&p.x<(b.x-a.x)*(p.z-a.z)/(b.z-a.z)+a.x)inside=!inside;}return inside; }
 export const landmarks=source.landmarks.map(l=>({id:l.id,x:l.position[0],z:-l.position[1],yaw:l.yaw*Math.PI/180}));
+export const MERLION = {id:'merlion',name:'Merlion Park',x:-1096,z:600,y:0,yaw:-Math.PI/2};
+export const MERLION_PLAZA = {x:-1120,z:600,w:78,d:38,height:.24};
+// Walking surfaces match the rendered terrace and elevated road deck.
+export function walkingSurfaceHeight(p) {
+  const road=closestRoad(p);
+  const roadY=road.distance<=road.road.width/2 ? road.y : 0;
+  const plaza=MERLION_PLAZA;
+  return Math.max(roadY,Math.abs(p.x-plaza.x)<=plaza.w/2 && Math.abs(p.z-plaza.z)<=plaza.d/2 ? plaza.height : 0);
+}
+export function vehicleSurfaceHeight(car,road=closestRoad(car)) {
+  const heading=car.heading||0,fx=Math.sin(heading),fz=-Math.cos(heading);
+  const axle=(car.halfL||2.55)*.7,track=(car.halfW||1.14)*.9;
+  const plaza=MERLION_PLAZA;
+  const surface=p=>{
+    const q=projectSegment(p,road.a,road.b);
+    const paved=q.distance<=road.road.width/2 ? q.y : 0;
+    return Math.max(paved,Math.abs(p.x-plaza.x)<=plaza.w/2 && Math.abs(p.z-plaza.z)<=plaza.d/2 ? plaza.height : 0);
+  };
+  let height=surface(car);
+  for(const front of [-1,1])for(const side of [-1,1]) {
+    height=Math.max(height,surface({
+      x:car.x+fx*axle*front-fz*track*side,
+      z:car.z+fz*axle*front+fx*track*side,
+    }));
+  }
+  return height;
+}
+landmarks.push(MERLION);
 export const gems = Array.from({length:24},(_,i)=> {
   // Early gems introduce the loop quickly; the rest reward exploring the whole circuit.
   const along=i<3 ? 42+i*85 : 380+(i-3)*(CIRCUIT_LENGTH-500)/21;
   return {id:`gem-${i+1}`,name:`Gem ${String(i+1).padStart(2,'0')}`, ...atCircuit(along,0),along};
 });
-export const SPAWN = atCircuit(0,3.6);
+export const MERLION_SPAWN = {x:-1145,z:582,y:0,heading:2.214297435588181};
+export const SPAWN = {...MERLION_SPAWN};
+// Persistent HUD landmarks and the explicit driving mission.  These sit on the
+// existing road graph so both the minimap and turn-by-turn guidance can route
+// to them without inventing a second map coordinate system.
+export const MISSIONS = [{
+  id:'marina-gem-run',
+  name:'Marina Gem Run',
+  vehicleId:'mission-sports',
+  ...atCircuit(34,-3.6),
+}];
+export const POLICE_STATION = {
+  id:'marina-police-station',
+  name:'Marina Bay Police Station',
+  ...atCircuit(640,-3.6),
+};
 const random=seededRandom(20260913);
 export const buildings=[];
 function clearSite(p,w,d) {
@@ -128,12 +187,19 @@ export const garageWalls=garages.flatMap(g=>[
   {local:[-4,0],w:15,d:1,h:6.5},
 ].map(w=>({...g.local(...w.local),w:w.w,d:w.d,h:w.h,yaw:Math.atan2(g.outward.x,g.outward.z),kind:'garage-wall'})));
 export const landmarkBases=landmarks.flatMap(l=> {
-  const dimensions={singapore_flyer:[72,30,4],marina_bay_sands:[290,75,8],esplanade:[118,76,8],fullerton:[94,48,34]}[l.id];
+  const dimensions={singapore_flyer:[72,30,4],marina_bay_sands:[306,105,8],esplanade:[118,76,8],fullerton:[94,48,34]}[l.id];
   return dimensions?[{x:l.x,z:l.z,w:dimensions[0],d:dimensions[1],h:dimensions[2],yaw:l.yaw,kind:'landmark'}]:[];
 });
 export const pitCollider={x:59,z:-66,w:20,d:180,h:12,yaw:-.149,kind:'pit-building'};
-export const obstacles=[...buildings,...barriers,...garageWalls,...landmarkBases,pitCollider];
-export const WORLD_BOUNDS={minX:-2000,maxX:400,minZ:-700,maxZ:1250};
+export const policeStationCollider={x:-220.8142,z:-150.5652,w:22,d:14,h:9,yaw:-POLICE_STATION.heading,kind:'police-station'};
+export const merlionCollider={x:-1096,z:600,w:8,d:8,h:9,yaw:0,kind:'landmark'};
+export const parkFurniture = [
+  ...[-12,12].flatMap(z => [-31,-21,-11,-1].map(x => ({x:-1120+x,z:600+z,w:5.5,d:1.3,h:1,yaw:0,kind:'bench'}))),
+  ...[-30,-14,2].map(x => ({x:-1120+x,z:616.5,w:4,d:2,h:2,yaw:0,kind:'planter'})),
+  ...[-14,14].flatMap(z => Array.from({length:9},(_,i)=>({x:-1154+i*8,z:600+z,w:.22,d:.22,h:1.6,yaw:0,kind:'bollard'})))
+].filter(o => closestRoad(o).distance > 6.5 + Math.hypot(o.w,o.d)/2 + 1.5);
+export const obstacles=[...parkFurniture,...buildings,...barriers,...garageWalls,...landmarkBases,pitCollider,policeStationCollider,merlionCollider,{x:MERLION.x+7.95,z:MERLION.z,w:6.1,d:6.1,h:.5,yaw:0,kind:"fountain-pool"}];
+
 
 export function atPublicRoad(road,along,lane=4.2) {
   const lengths=road.points.slice(1).map((p,i)=>distance(road.points[i],p)),length=lengths.reduce((a,b)=>a+b,0);

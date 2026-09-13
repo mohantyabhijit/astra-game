@@ -3,6 +3,7 @@ export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export const angleDelta = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const forward = h => ({ x: Math.sin(h), z: -Math.cos(h) });
+export const MAX_CAR_SPEED = 150 / 3.6; // Simulation velocities are metres per second.
 export function seededRandom(seed = 731) {
   return () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
 }
@@ -15,15 +16,25 @@ export function drivePlayer(g, input, dt) {
   let lateral = p.vx * r.x + p.vz * r.z;
   const throttle = (input.forward ? 1 : 0) - (input.reverse ? 1 : 0);
   const steering = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  p.steer += (steering - p.steer) * (1 - Math.exp(-12 * dt));
+  p.steer += (steering - p.steer) * (1 - Math.exp(-5.5 * dt));
   g.boosting = !!(input.boost && input.forward && g.boost > 1 && longitudinal > 3);
-  const acceleration = throttle < 0 && longitudinal > 1 ? -37 : throttle * (g.boosting ? 30 : 20);
+  const speedRatio = clamp(Math.abs(longitudinal) / MAX_CAR_SPEED, 0, 1);
+  const braking=throttle&&Math.sign(throttle)!==Math.sign(longitudinal)&&Math.abs(longitudinal)>.3;
+  const acceleration = braking ? throttle*30 : throttle * (g.boosting ? 16 : 12) * (1 - .65 * speedRatio ** 2);
   longitudinal += acceleration * dt;
-  longitudinal *= Math.exp(-(input.handbrake ? 1.35 : throttle ? 0.30 : 0.70) * dt);
-  longitudinal = clamp(longitudinal, -12, g.boosting ? 51 : 37);
+  // Engine power tapers as speed builds; boost improves acceleration, not the cap.
+  const resistance = (.15 + .001 * longitudinal ** 2) * dt;
+  longitudinal = Math.sign(longitudinal) * Math.max(0, Math.abs(longitudinal) - resistance);
+  longitudinal *= Math.exp(-(input.handbrake ? 1.35 : throttle ? 0 : .25) * dt);
+  longitudinal = clamp(longitudinal, -12, MAX_CAR_SPEED);
   lateral *= Math.exp(-(input.handbrake ? 2.0 : 10) * dt);
-  p.heading += p.steer * clamp(longitudinal / 9, -1, 1) * (input.handbrake ? 2.2 : 1.45) /
-    (1 + Math.abs(longitudinal) / 48) * dt;
+  // Wobbleheads bicycle steering: signed speed, actual axle spacing and
+  // speed-sensitive wheel angle. Tire grip limits abrupt high-speed yaw.
+  const wheelbase=p.type==='sports'?2.84:p.type==='mini'?2.4:2.54;
+  p.steeringAngle=p.steer*.45/(1+Math.abs(longitudinal)*.035);
+  const yaw=longitudinal/wheelbase*Math.tan(p.steeringAngle);
+  const yawLimit=(input.handbrake?15:10)/Math.max(4,Math.abs(longitudinal));
+  p.heading+=clamp(yaw,-yawLimit,yawLimit)*dt;
   const nf = forward(p.heading), nr = { x: -nf.z, z: nf.x };
   // Most of the grip follows the steering; handbraking preserves more lateral momentum.
   const grip = input.handbrake ? 0.30 : 0.88;

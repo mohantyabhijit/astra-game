@@ -2,66 +2,203 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#101d25" />
-    <meta name="description" content="Explore the 2026 Marina Bay circuit, collect gems, escape police and find cover in a daytime Singapore driving game." />
-    <meta property="og:title" content="Marina Getaway — Singapore by day." />
-    <meta property="og:description" content="A daytime Singapore driving game with gems, pursuit and cooldown areas." />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#101e28" />
+    <meta
+      name="description"
+      content="Choose your Wobblehead and explore Singapore's Marina Bay."
+    />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Marina Getaway — Singapore by day.</title>
+    <title>Marina Getaway</title>
   </head>
-  <body class="daytime">
-    <canvas id="game" aria-label="3D city driving game"></canvas>
+  <body>
+    <div id="loading-screen" role="status" aria-live="polite" style="position:fixed;inset:0;z-index:100000;background:#102832;color:#f5efd9;display:grid;place-items:center;text-align:center">
+      <div><div class="loading-spinner"></div><p style="letter-spacing:.3em;font-size:12px">MARINA GETAWAY</p><h2 id="loading-label">Loading your city…</h2><p style="opacity:.65">Getting the world ready to explore</p></div>
+    </div>
+    <canvas id="game" aria-label="Marina Bay 3D game"></canvas>
     <div class="vignette"></div>
     <header>
-      <a class="brand" href="./" aria-label="Midnight Run home"><span class="brand-icon">M<span>↗</span></span><span>MIDNIGHT<span class="brand-run">RUN</span></span></a>
-      <div class="session-tag"><i></i> SINGAPORE <span> / </span> 2026</div>
-      <nav aria-label="Game options">
-        <button id="sound" class="icon-button" aria-label="Mute sound" title="Sound · N">♪<span id="sound-label">ON</span></button>
-        <button id="map-toggle" class="icon-button" aria-label="Expand minimap" title="Map · M">▧</button>
-        <button id="help" class="icon-button" aria-label="Show controls" title="Controls">?</button>
-        <button id="pause" class="icon-button hidden" aria-label="Pause game" title="Pause · Esc">Ⅱ</button>
+      <a class="brand" href="./"
+        ><span class="brand-mark">MG</span
+        ><span>MARINA<small>GETAWAY</small></span></a
+      >
+      <div class="location"><i></i> MARINA BAY · SINGAPORE</div>
+      <nav>
+        <button id="sound" class="round">
+          ♪ <small id="sound-label">ON</small></button
+        ><button id="map-toggle" class="round">▧</button
+        ><button id="help" class="round">?</button
+        ><button id="pause" class="round hidden">Ⅱ</button>
       </nav>
     </header>
-
-    <section id="intro" class="intro">
-      <div class="eyebrow"><span class="tiny-line"></span> SINGAPORE · DAYTIME DRIVE</div>
-      <h1>MARINA<br /><em>GETAWAY.</em></h1>
-      <p class="tagline">The bay is yours.<br />Until the police find you.</p>
-      <p class="intro-copy">Collect gems along the Formula 1 circuit.<br />Find cover. Cool down. Go again.</p>
-      <button id="start" class="primary">ENTER MARINA BAY <span>↗</span></button>
-      <div class="start-hint"><kbd>ENTER</kbd> TO DRIVE <span>·</span> KEYBOARD + TOUCH</div>
-      <div class="intro-best">PERSONAL BEST <strong id="intro-best">000000</strong></div>
-    </section>
-    <aside id="briefing" class="briefing">
-      <div class="eyebrow"><i class="live-dot"></i> THE JOB</div>
-      <div class="job-row"><b>01</b><span>Collect gems · follow the purple route</span><span>↗</span></div>
-      <div class="job-row"><b>02</b><span>Three gems trigger a police chase</span><span>↗</span></div>
-      <div class="job-row"><b>03</b><span>Follow amber to cover · cool down</span><span>↗</span></div>
-      <div class="briefing-footer">2026 CIRCUIT · 4.927 KM <span>×</span> THREE.JS</div>
-    </aside>
-
-    <main id="hud" class="hidden" aria-label="Game information">
-      <div class="top-hud">
-        <div class="score-panel"><span class="label">RUN SCORE</span><strong id="score">000000</strong><span class="score-best">BEST <span id="best">0</span></span></div>
-        <div class="mission-panel"><div class="mission-title"><span class="label" id="mission-label">GEMS COLLECTED</span><span id="progress">0 / 24</span></div><div id="checkpoint-dots" class="checkpoint-dots"><i></i><i></i><i></i></div><div id="objective">3 gems until the next chase</div></div>
-        <div class="time-panel"><span class="label">DRIVE TIME</span><strong id="timer">00:00</strong><span class="label mint"><span id="lap-progress">LAP 1 · 0%</span></span></div>
+    <section id="intro" class="agent-select">
+      <div class="select-copy">
+        <p class="eyebrow">SELECT YOUR WOBBLEHEAD</p>
+        <h1>CHOOSE<br /><em>YOUR LEAD.</em></h1>
+        <p>
+          Start beside the Merlion, choose your own direction, and make Marina
+          Bay your playground. A gem mission is there whenever you want it.
+        </p>
+        <div class="roster" role="radiogroup">
+          <button
+            id="select-kai"
+            class="agent active"
+            data-character="kai"
+            role="radio"
+            aria-checked="true"
+          >
+            <span>01</span><b>KAI</b><small>THE SPARK</small></button
+          ><button
+            id="select-rae"
+            class="agent"
+            data-character="rae"
+            role="radio"
+            aria-checked="false"
+          >
+            <span>02</span><b>RAE</b><small>THE ACE</small>
+          </button>
+        </div>
+        <button id="start" disabled class="primary">EXPLORE THE BAY <span>↗</span></button>
+        <div class="start-hint">
+          <kbd>←</kbd><kbd>→</kbd> CHOOSE <span>·</span> <kbd>ENTER</kbd> LOCK
+          IN
+        </div>
       </div>
-      <div class="destination"><span id="direction">↑</span><div><b id="destination-name">GEM 01</b><small id="destination-distance">42 m by road</small><small class="nav-cue"><span id="turn-cue">Continue</span> <span id="turn-distance"></span></small></div></div>
-      <div id="cooldown-panel" class="cooldown-panel hidden"><span id="cooldown-state">ENTER COVER & PARK</span><div><i id="cooldown-fill"></i></div></div>
-      <div id="toast" role="status" aria-live="polite"></div>
-      <div id="pursuit" class="pursuit"><span class="siren-dot"></span><span id="pursuit-label">PURSUIT ACTIVE</span><span id="heat">★ ★ ☆</span></div>
-      <div class="map-panel"><div class="map-title"><span>MARINA BAY</span><span>N ↑</span></div><canvas id="minimap" width="420" height="420" aria-label="City map: purple gem route, amber cooldown route, red police, player heading"></canvas><div class="map-key"><i></i> YOU <i></i> GEM <i></i> COVER</div></div>
-      <div class="driving-tip"><kbd>W A S D</kbd> DRIVE <span>·</span> <kbd>SPACE</kbd> DRIFT <span>·</span> <kbd>SHIFT</kbd> BOOST</div>
-      <div class="car-hud"><div class="speed-line"><span id="gear">N</span><strong id="speed">0</strong><span>KM/H</span></div><div class="tachometer" id="tachometer"></div><div class="meter-label"><span>NITRO <kbd>SHIFT</kbd></span><span id="boost-number">100%</span></div><div class="meter"><i id="boost-bar"></i></div><div class="meter-label"><span>CAR INTEGRITY</span><span id="health-number">100%</span></div><div class="meter health"><i id="health-bar"></i></div></div>
+      <div class="character-stage">
+        <div class="stage-number" id="stage-number">01</div>
+        <canvas id="character-preview"></canvas>
+        <div class="agent-caption">
+          <span id="agent-role">THE SPARK</span
+          ><strong id="agent-name">KAI</strong><small>WOBBLEHEAD DRIVER</small>
+        </div>
+        <div class="stage-lines"></div>
+      </div>
+    </section>
+    <main id="hud" class="hidden">
+      <div class="objective-card">
+        <span class="eyebrow" id="mission-label">FREE ROAM</span
+        ><strong id="objective">Explore Marina Bay</strong
+        ><small id="progress">OPTIONAL MISSION · FIND M</small>
+      </div>
+      <div class="destination">
+        <span id="direction">↑</span>
+        <div>
+          <b id="destination-name">MISSION</b
+          ><small id="destination-distance">Follow M on the map</small
+          ><small
+            ><span id="turn-cue">Continue</span> <span id="turn-distance"></span
+          ></small>
+        </div>
+      </div>
+      <div id="pursuit" class="pursuit clear">
+        <span class="siren-dot"></span
+        ><span id="pursuit-label">CITY CLEAR</span>
+        <div id="impact-pips"><i></i><i></i><i></i></div>
+        <span id="heat">0 / 3 HITS</span>
+      </div>
+      <div id="cooldown-panel" class="cooldown-panel hidden">
+        <strong id="cooldown-count" class="cooldown-count">5.0</strong>
+        <span id="cooldown-state">GET TO COOLDOWN</span>
+        <div><i id="cooldown-fill"></i></div>
+      </div>
+      <div id="toast" role="status"></div>
+      <section class="map-panel">
+        <div class="map-title"><b>MARINA BAY</b><span>N ↑</span></div>
+        <canvas id="minimap" width="420" height="420"></canvas>
+        <div class="map-key">
+          <span><i class="you"></i>YOU</span
+          ><span><i class="mission"></i>M MISSION</span
+          ><span><i class="station"></i>P POLICE</span
+          ><span><i class="cover"></i>◇ COOLDOWN</span>
+        </div>
+      </section>
+      <div class="vehicle-hud">
+        <span class="mode" id="mode-label">ON FOOT</span>
+        <div class="speed"><strong id="speed">0</strong><span>KM/H</span></div>
+        <div class="hits">
+          <small>POLICE IMPACTS</small><b id="hits-text">○ ○ ○</b>
+        </div>
+      </div>
+      <div class="interaction">
+        <span id="interaction-copy">Walk to a vehicle</span
+        ><button id="interact" class="interact-button">
+          <kbd>E</kbd> INTERACT
+        </button>
+      </div>
+      <div class="controls-strip">
+        <kbd>W A S D</kbd> MOVE <span>·</span> <kbd>E</kbd> ENTER / EXIT
+        <span>·</span> <kbd>SHIFT</kbd> SPRINT / BOOST <span>·</span>
+        <kbd>C</kbd> CAMERA
+      </div>
+      <span id="score" class="hidden">0</span
+      ><span id="best" class="hidden">0</span
+      ><span id="timer" class="hidden">00:00</span
+      ><span id="gear" class="hidden">N</span
+      ><span id="boost-number" class="hidden"></span
+      ><span id="health-number" class="hidden"></span
+      ><span id="lap-progress" class="hidden"></span>
+      <div id="checkpoint-dots" class="hidden"><i></i><i></i><i></i></div>
+      <div id="tachometer" class="hidden"></div>
+      <div id="boost-bar" class="hidden"></div>
+      <div id="health-bar" class="hidden"></div>
     </main>
-
-    <div id="touch-controls" class="hidden"><div><button data-input="left" aria-label="Steer left">◀</button><button data-input="right" aria-label="Steer right">▶</button></div><div><button data-input="handbrake" aria-label="Handbrake">DRIFT</button><button data-input="boost" aria-label="Boost">N₂O</button><button data-input="reverse" aria-label="Brake or reverse">BRAKE</button><button data-input="forward" aria-label="Accelerate">GAS</button></div></div>
-
-    <section id="result" class="modal-scrim hidden" aria-modal="true" role="dialog" aria-labelledby="result-title"><div class="result-card"><div id="result-eyebrow" class="eyebrow">PULL OVER FOR A MOMENT</div><h2 id="result-title">PAUSED.</h2><p id="result-copy">The city can wait.</p><div id="result-stats" class="result-stats"></div><button id="resume" class="primary">BACK TO THE CHASE <span>↗</span></button><button id="restart" class="secondary">RESTART RUN <span>↻</span></button><div class="result-hint"><kbd>R</kbd> Recover a stuck car · −250 points</div></div></section>
-    <section id="controls" class="modal-scrim hidden" aria-modal="true" role="dialog" aria-labelledby="controls-title"><div class="controls-card"><button id="close-help" class="close-button" aria-label="Close controls">×</button><div class="eyebrow">KNOW YOUR RIDE</div><h2 id="controls-title">STREET SMARTS.</h2><dl><dt><kbd>W</kbd> / <kbd>↑</kbd></dt><dd>Accelerate</dd><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>Brake, then reverse</dd><dt><kbd>A D</kbd> / <kbd>← →</kbd></dt><dd>Steer</dd><dt><kbd>SPACE</kbd></dt><dd>Handbrake / tight turns</dd><dt><kbd>SHIFT</kbd></dt><dd>Nitro boost · recharges</dd><dt><kbd>C</kbd></dt><dd>Change follow camera</dd><dt><kbd>ESC</kbd> / <kbd>P</kbd></dt><dd>Pause</dd><dt><kbd>R</kbd></dt><dd>Recover car · −250 points</dd><dt><kbd>M</kbd></dt><dd>Expand / collapse map</dd><dt><kbd>H</kbd></dt><dd>Start a police chase</dd><dt><kbd>N</kbd></dt><dd>Mute / unmute</dd></dl><p>Drive the 2026 Marina Bay circuit and collect purple gems. Every three gems starts a pursuit; H starts one immediately. Follow the amber road route to the nearest reachable cooldown area. Enter at the P marker, park behind the opaque screen, and stay unseen for 8 seconds. Leaving cover or being spotted interrupts cooldown. Cleared heat resumes collection. Gems save automatically. Vehicle theft is deferred: you already have the car.</p><a href="./references/circuit-layout.jpeg" target="_blank" rel="noopener">VIEW CIRCUIT REFERENCE ↗</a></div></section>
-    <footer id="footer"><span>MARINA BAY <b> / </b> 11:20 AM</span><span>LOCAL DAYTIME EDITION <b>↗</b></span><a href="https://github.com/mohantyabhijit/astra-game" target="_blank" rel="noopener">PROJECT REPO ↗</a></footer>
-    <div id="error" class="modal-scrim hidden"><div class="result-card"><h2>ENGINE TROUBLE.</h2><p id="error-copy">This game needs a browser with WebGL 2 enabled. Try a recent Chrome, Edge, Firefox, or Safari browser.</p><button class="primary" onclick="location.reload()">TRY AGAIN ↗</button></div></div>
-    <script type="module" src="/src/main.js"></script>
+    <section id="result" class="modal-scrim hidden">
+      <div class="modal">
+        <p id="result-eyebrow" class="eyebrow">TAKE A BREATHER</p>
+        <h2 id="result-title">PAUSED.</h2>
+        <p id="result-copy">Marina Bay will wait.</p>
+        <div id="result-stats"></div>
+        <button id="resume" class="primary">
+          BACK TO THE CITY <span>↗</span></button
+        ><button id="restart" class="secondary">RESTART FROM PLAZA</button>
+      </div>
+    </section>
+    <section id="controls" class="modal-scrim hidden">
+      <div class="modal controls-modal">
+        <button id="close-help" class="close">×</button>
+        <p class="eyebrow">FIELD GUIDE</p>
+        <h2>STREET SMARTS.</h2>
+        <dl>
+          <dt><kbd>W A S D</kbd></dt>
+          <dd>Walk or drive</dd>
+          <dt><kbd>E</kbd></dt>
+          <dd>Enter / exit a vehicle</dd>
+          <dt><kbd>SHIFT</kbd></dt>
+          <dd>Sprint / boost</dd>
+          <dt><kbd>SPACE</kbd></dt>
+          <dd>Handbrake</dd>
+          <dt>F</dt><dd>Punch on foot</dd>
+          <dt><kbd>C</kbd></dt>
+          <dd>Change camera</dd>
+          <dt><kbd>M</kbd></dt>
+          <dd>Expand map</dd>
+          <dt><kbd>ESC</kbd></dt>
+          <dd>Pause</dd>
+        </dl>
+        <p>
+          Explore freely from the Merlion. Find M whenever you want to start
+          the optional gem mission. During a pursuit, reach ◇, break police
+          sight, and stay still for 5 seconds. Being seen or moving resets the
+          countdown.
+        </p>
+      </div>
+    </section>
+    <footer id="footer">
+      MERLION · MARINA BAY <span>OPEN CITY EXPLORATION</span
+      ><span>LOCAL DAYTIME EDITION</span>
+    </footer>
+    <div id="error" class="modal-scrim hidden">
+      <div class="modal">
+        <h2>ENGINE TROUBLE.</h2>
+        <p id="error-copy">This game needs WebGL 2.</p>
+        <button class="primary" onclick="location.reload()">
+          TRY AGAIN ↗
+        </button>
+      </div>
+    </div>
+    <script type="module" src="/src/desktop.js"></script>
   </body>
 </html>

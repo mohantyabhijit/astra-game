@@ -19,7 +19,7 @@ export class GameAudio {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, running = g.status === 'running';
     this.engine.frequency.setTargetAtTime(38 + Math.abs(g.player.speed) * 2.4, t, .1);
-    this.engineGain.gain.setTargetAtTime(running ? .25 : 0, t, .1);
+    this.engineGain.gain.setTargetAtTime(running && g.mode === 'driving' ? .25 : 0, t, .1);
     this.siren.frequency.setTargetAtTime(660 + Math.sin(g.elapsed * 4) * 190, t, .05);
     this.sirenGain.gain.setTargetAtTime(running ? Math.max(0, 1 - g.nearestCop / 100) * .07 : 0, t, .2);
   }
